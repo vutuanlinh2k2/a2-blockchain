@@ -102,16 +102,16 @@ Define a clear and robust block structure. Each block must contain at least:
 - [x] Create project folder structure
 - [x] Set up development environment (ts-node, nodemon)
 
-#### **Step 2: Database Schema Design**
+#### **Step 2: Database Schema Design** ✅
 
-- [ ] Design SQLite schema:
-  - [ ] `blocks` table (id, index, timestamp, previous_hash, hash, nonce, difficulty, data)
-  - [ ] `transactions` table (id, block_id, from_address, to_address, amount, signature)
-  - [ ] `utxos` table (transaction_id, output_index, address, amount, spent)
-  - [ ] `chain_state` table (key, value) for metadata
-- [ ] Create database initialization script
-- [ ] Implement database connection utilities
-- [ ] Add database migration system
+- [x] Design SQLite schema:
+  - [x] `blocks` table (id, index, timestamp, previous_hash, hash, nonce, difficulty, data)
+  - [x] `transactions` table (id, block_id, from_address, to_address, amount, signature)
+  - [x] `utxos` table (transaction_id, output_index, address, amount, spent)
+  - [x] `chain_state` table (key, value) for metadata
+- [x] Create database initialization script
+- [x] Implement database connection utilities
+- [x] Add database migration system
 
 ### **Phase 2: Core Blockchain Components**
 
@@ -383,9 +383,9 @@ blockchain-cli/
 
 ### **Current Status**
 
-**Current Step:** Step 2 - Database Schema Design
-**Completed:** Step 1 - Project Setup ✅
-**Estimated Time:** 11-14 development sessions remaining
+**Current Step:** Step 3 - Transaction System
+**Completed:** Steps 1-2 ✅
+**Estimated Time:** 10-13 development sessions remaining
 **Priority:** Focus on requirements 1-8 first, then optional features
 
 ### **Key Success Metrics**
