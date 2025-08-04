@@ -115,53 +115,53 @@ Define a clear and robust block structure. Each block must contain at least:
 
 ### **Phase 2: Core Blockchain Components**
 
-#### **Step 3: Transaction System** → _Covers Requirement 3_
+#### **Step 3: Transaction System** → _Covers Requirement 3_ ✅
 
-- [ ] Create `Transaction` class:
-  - [ ] Transaction inputs (references to UTXOs)
-  - [ ] Transaction outputs (new UTXOs)
-  - [ ] Transaction ID calculation
-  - [ ] Transaction serialization/deserialization
-- [ ] Implement UTXO model:
-  - [ ] UTXO creation and tracking
-  - [ ] UTXO spending validation
-  - [ ] Balance calculation from UTXOs
-- [ ] Create transaction pool (mempool):
-  - [ ] Add transactions to pool
-  - [ ] Remove transactions when included in block
-  - [ ] Validate transactions before adding to pool
+- [x] Create `Transaction` class:
+  - [x] Transaction inputs (references to UTXOs)
+  - [x] Transaction outputs (new UTXOs)
+  - [x] Transaction ID calculation
+  - [x] Transaction serialization/deserialization
+- [x] Implement UTXO model:
+  - [x] UTXO creation and tracking
+  - [x] UTXO spending validation
+  - [x] Balance calculation from UTXOs
+- [x] Create transaction pool (mempool):
+  - [x] Add transactions to pool
+  - [x] Remove transactions when included in block
+  - [x] Validate transactions before adding to pool
 
-#### **Step 4: Block Structure** → _Covers Requirement 1_
+#### **Step 4: Block Structure** → _Covers Requirement 1_ ✅
 
-- [ ] Create `Block` class with required fields:
-  - [ ] `index` - Block height/identifier
-  - [ ] `timestamp` - Block creation time
-  - [ ] `transactions` - Array of transactions (data payload)
-  - [ ] `previousHash` - Hash of previous block
-  - [ ] `hash` - Current block's hash
-  - [ ] `nonce` - Proof-of-Work nonce
-  - [ ] `difficulty` - Mining difficulty target
-- [ ] Implement Merkle tree for transactions:
-  - [ ] `MerkleTree` class
-  - [ ] Calculate Merkle root of transactions
-  - [ ] Include Merkle root in block hash calculation
-- [ ] Add block serialization/deserialization
-- [ ] Create genesis block generation
+- [x] Create `Block` class with required fields:
+  - [x] `index` - Block height/identifier
+  - [x] `timestamp` - Block creation time
+  - [x] `transactions` - Array of transactions (data payload)
+  - [x] `previousHash` - Hash of previous block
+  - [x] `hash` - Current block's hash
+  - [x] `nonce` - Proof-of-Work nonce
+  - [x] `difficulty` - Mining difficulty target
+- [x] Implement Merkle tree for transactions:
+  - [x] `MerkleTree` class
+  - [x] Calculate Merkle root of transactions
+  - [x] Include Merkle root in block hash calculation
+- [x] Add block serialization/deserialization
+- [x] Create genesis block generation
 
-#### **Step 5: Cryptographic System** → _Covers Requirement 2_
+#### **Step 5: Cryptographic System** → _Covers Requirement 2_ ✅
 
-- [ ] Implement `Hash` utility class:
-  - [ ] SHA-256 hashing function
-  - [ ] Block hash calculation (includes all critical data)
-  - [ ] Transaction hash calculation
-- [ ] Create chain integrity verification:
-  - [ ] Validate individual block hashes
-  - [ ] Validate chain linkage (previous hash references)
-  - [ ] Detect and report tampering
-- [ ] Add tamper demonstration functionality:
-  - [ ] Modify historical block data
-  - [ ] Show cascade of invalid hashes
-  - [ ] Restore original data
+- [x] Implement `Hash` utility class:
+  - [x] SHA-256 hashing function
+  - [x] Block hash calculation (includes all critical data)
+  - [x] Transaction hash calculation
+- [x] Create chain integrity verification:
+  - [x] Validate individual block hashes
+  - [x] Validate chain linkage (previous hash references)
+  - [x] Detect and report tampering
+- [x] Add tamper demonstration functionality:
+  - [x] Modify historical block data
+  - [x] Show cascade of invalid hashes
+  - [x] Restore original data
 
 ### **Phase 3: Consensus & Chain Management**
 
@@ -383,9 +383,9 @@ blockchain-cli/
 
 ### **Current Status**
 
-**Current Step:** Step 3 - Transaction System
-**Completed:** Steps 1-2 ✅
-**Estimated Time:** 10-13 development sessions remaining
+**Current Step:** Step 6 - Proof-of-Work Consensus
+**Completed:** Steps 1-5 ✅
+**Estimated Time:** 7-10 development sessions remaining
 **Priority:** Focus on requirements 1-8 first, then optional features
 
 ### **Key Success Metrics**
