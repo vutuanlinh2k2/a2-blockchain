@@ -506,7 +506,7 @@ export class BlockchainStorage {
    * Clears all blockchain data from the database.
    * WARNING: This will permanently delete all data!
    */
-  private clearAllData(): void {
+  public clearAllData(): void {
     try {
       const transaction = this.db.transaction(() => {
         this.db.exec(`DELETE FROM transaction_outputs`);
@@ -571,6 +571,20 @@ export class BlockchainStorage {
         spentUtxoCount: 0,
         chainStateCount: 0,
       };
+    }
+  }
+
+  /**
+   * Checks if the database is empty (no blocks exist).
+   * @returns True if database is empty, false otherwise
+   */
+  public isDatabaseEmpty(): boolean {
+    try {
+      const stats = this.getDatabaseStats();
+      return stats.blockCount === 0;
+    } catch (error) {
+      console.error("❌ Failed to check if database is empty:", error);
+      return false;
     }
   }
 }

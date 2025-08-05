@@ -6,7 +6,6 @@ import { Command } from "commander";
 import chalk from "chalk";
 import { getBlockchain, handleError } from "../utils";
 import { BaseOptions, DemoTamperOptions } from "../types";
-import { Transaction } from "../../core/Transaction";
 
 /**
  * Demo double-spend command - Demonstrate double-spend prevention

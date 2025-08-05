@@ -25,6 +25,9 @@ import {
   createValidateCommand,
   createExportCommand,
   createImportCommand,
+  createClearDbCommand,
+  createSeedDbCommand,
+  createResetDbCommand,
 } from "./commands/maintenance";
 
 import {
@@ -69,6 +72,11 @@ export function createProgram(): Command {
   program.addCommand(createValidateCommand());
   program.addCommand(createExportCommand());
   program.addCommand(createImportCommand());
+
+  // Database management commands
+  program.addCommand(createClearDbCommand());
+  program.addCommand(createSeedDbCommand());
+  program.addCommand(createResetDbCommand());
 
   // Demo commands - All Required Features (1-8)
   program.addCommand(createDemoBlockStructureCommand()); // Feature 1: Block Structure

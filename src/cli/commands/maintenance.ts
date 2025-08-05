@@ -4,7 +4,12 @@
 
 import { Command } from "commander";
 import chalk from "chalk";
-import { getBlockchain, resetBlockchain, handleError } from "../utils";
+import {
+  getBlockchain,
+  resetBlockchain,
+  handleError,
+  initBlockchain,
+} from "../utils";
 import { BaseOptions, FileOptions } from "../types";
 
 /**
@@ -102,6 +107,124 @@ export function createImportCommand(): Command {
         }
       } catch (error) {
         handleError("Import", error);
+      }
+    });
+}
+
+/**
+ * Clear database command - Clear all blockchain data
+ */
+export function createClearDbCommand(): Command {
+  return new Command("clear-db")
+    .description("Clear all blockchain data from database")
+    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
+    .action((options: BaseOptions) => {
+      try {
+        console.log(
+          chalk.yellow(
+            "⚠️  WARNING: This will permanently delete all blockchain data!"
+          )
+        );
+
+        const bc = getBlockchain(options.database);
+        const storage = bc.getStorage();
+
+        console.log(chalk.blue("🧹 Clearing database..."));
+
+        storage.clearAllData();
+
+        // Reset global instance to reflect cleared state
+        resetBlockchain();
+
+        console.log(chalk.green("✅ Database cleared successfully!"));
+      } catch (error) {
+        handleError("Clear database", error);
+      }
+    });
+}
+
+/**
+ * Seed database command - Initialize database with genesis block (if empty)
+ */
+export function createSeedDbCommand(): Command {
+  return new Command("seed-db")
+    .description("Seed database with genesis block (only if database is empty)")
+    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
+    .action((options: BaseOptions) => {
+      try {
+        // Check if database is empty first, before initializing blockchain
+        // This prevents automatic genesis block creation
+        const { BlockchainDB } = require("../../storage/Database");
+        const {
+          BlockchainStorage,
+        } = require("../../storage/BlockchainStorage");
+
+        const tempDb = new BlockchainDB(options.database);
+        const tempStorage = new BlockchainStorage(tempDb);
+
+        if (!tempStorage.isDatabaseEmpty()) {
+          console.log(
+            chalk.yellow("⚠️  Database is not empty. Seeding skipped.")
+          );
+          console.log(
+            "Use 'reset-db' to clear and seed, or 'clear-db' to clear only."
+          );
+          tempDb.close();
+          return;
+        }
+
+        tempDb.close();
+
+        console.log(chalk.blue("🌱 Seeding database with genesis block..."));
+
+        // Now create the blockchain (which will create genesis block)
+        const newBc = initBlockchain(options.database);
+        const stats = newBc.getStats();
+
+        console.log(chalk.green("✅ Database seeded successfully!"));
+        console.log(
+          `📊 Created ${stats.totalBlocks} blocks with ${stats.totalTransactions} transactions`
+        );
+      } catch (error) {
+        handleError("Seed database", error);
+      }
+    });
+}
+
+/**
+ * Reset database command - Clear and seed database
+ */
+export function createResetDbCommand(): Command {
+  return new Command("reset-db")
+    .description("Clear database and seed with genesis block")
+    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
+    .action((options: BaseOptions) => {
+      try {
+        console.log(
+          chalk.yellow(
+            "⚠️  WARNING: This will permanently delete all blockchain data!"
+          )
+        );
+
+        const bc = getBlockchain(options.database);
+        const storage = bc.getStorage();
+
+        console.log(chalk.blue("🧹 Clearing database..."));
+        storage.clearAllData();
+
+        console.log(chalk.blue("🌱 Seeding database with genesis block..."));
+
+        // Reset and reinitialize to create genesis block
+        resetBlockchain();
+        const newBc = initBlockchain(options.database);
+        const stats = newBc.getStats();
+
+        console.log(chalk.green("✅ Database reset and seeded successfully!"));
+        console.log(
+          `📊 Created ${stats.totalBlocks} blocks with ${stats.totalTransactions} transactions`
+        );
+      } catch (error) {
+        handleError("Reset database", error);
       }
     });
 }
