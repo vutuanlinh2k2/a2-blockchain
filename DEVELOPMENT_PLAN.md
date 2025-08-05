@@ -165,38 +165,38 @@ Define a clear and robust block structure. Each block must contain at least:
 
 ### **Phase 3: Consensus & Chain Management**
 
-#### **Step 6: Proof-of-Work Consensus** → _Covers Requirement 4_
+#### **Step 6: Proof-of-Work Consensus** → _Covers Requirement 4_ ✅
 
-- [ ] Create `ProofOfWork` class:
-  - [ ] Mining algorithm (find nonce that produces hash with required zeros)
-  - [ ] Difficulty calculation (based on block time targets)
-  - [ ] Difficulty adjustment algorithm
-  - [ ] Hash rate calculation and statistics
-- [ ] Implement mining process:
-  - [ ] Select transactions from mempool
-  - [ ] Create candidate block
-  - [ ] Find valid nonce through iteration
-  - [ ] Progress reporting during mining
-- [ ] Add block validation:
-  - [ ] Verify proof-of-work (hash meets difficulty)
-  - [ ] Validate all transactions in block
-  - [ ] Check block structure and timestamps
+- [x] Create `ProofOfWork` class:
+  - [x] Mining algorithm (find nonce that produces hash with required zeros)
+  - [x] Difficulty calculation (based on block time targets)
+  - [x] Difficulty adjustment algorithm
+  - [x] Hash rate calculation and statistics
+- [x] Implement mining process:
+  - [x] Select transactions from mempool
+  - [x] Create candidate block
+  - [x] Find valid nonce through iteration
+  - [x] Progress reporting during mining
+- [x] Add block validation:
+  - [x] Verify proof-of-work (hash meets difficulty)
+  - [x] Validate all transactions in block
+  - [x] Check block structure and timestamps
 
-#### **Step 7: Blockchain Core** → _Covers Requirement 6_
+#### **Step 7: Blockchain Core** → _Covers Requirement 6_ ✅
 
-- [ ] Create main `Blockchain` class:
-  - [ ] Chain storage and management
-  - [ ] Add new blocks with validation
-  - [ ] Longest chain rule implementation
-  - [ ] Chain reorganization for forks
-- [ ] Implement chronological ordering:
-  - [ ] Timestamp validation (blocks can't be in the past)
-  - [ ] Sequential block index enforcement
-  - [ ] Prevent future timestamp manipulation
-- [ ] Add chain statistics and metrics:
-  - [ ] Total blocks, transactions, difficulty
-  - [ ] Average block time calculation
-  - [ ] Chain validation status
+- [x] Create main `Blockchain` class:
+  - [x] Chain storage and management
+  - [x] Add new blocks with validation
+  - [x] Longest chain rule implementation
+  - [x] Chain reorganization for forks
+- [x] Implement chronological ordering:
+  - [x] Timestamp validation (blocks can't be in the past)
+  - [x] Sequential block index enforcement
+  - [x] Prevent future timestamp manipulation
+- [x] Add chain statistics and metrics:
+  - [x] Total blocks, transactions, difficulty
+  - [x] Average block time calculation
+  - [x] Chain validation status
 
 ### **Phase 4: Advanced Features**
 
@@ -383,9 +383,9 @@ blockchain-cli/
 
 ### **Current Status**
 
-**Current Step:** Step 6 - Proof-of-Work Consensus
-**Completed:** Steps 1-5 ✅
-**Estimated Time:** 7-10 development sessions remaining
+**Current Step:** Step 8 - Double-Spend Prevention
+**Completed:** Steps 1-7 ✅
+**Estimated Time:** 5-8 development sessions remaining
 **Priority:** Focus on requirements 1-8 first, then optional features
 
 ### **Key Success Metrics**
