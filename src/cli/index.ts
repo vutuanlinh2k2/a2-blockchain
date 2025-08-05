@@ -30,6 +30,12 @@ import {
 import {
   createDemoDoubleSpendCommand,
   createDemoTamperCommand,
+  createDemoBlockStructureCommand,
+  createDemoMiningCommand,
+  createDemoTransactionsCommand,
+  createDemoOrderingCommand,
+  createDemoPersistenceCommand,
+  createDemoFullWorkflowCommand,
 } from "./commands/demo";
 
 /**
@@ -64,9 +70,15 @@ export function createProgram(): Command {
   program.addCommand(createExportCommand());
   program.addCommand(createImportCommand());
 
-  // Demo commands
-  program.addCommand(createDemoDoubleSpendCommand());
-  program.addCommand(createDemoTamperCommand());
+  // Demo commands - All Required Features (1-8)
+  program.addCommand(createDemoBlockStructureCommand()); // Feature 1: Block Structure
+  program.addCommand(createDemoTamperCommand()); // Feature 2: Cryptographic Hashing
+  program.addCommand(createDemoTransactionsCommand()); // Feature 3: Transaction Handling
+  program.addCommand(createDemoMiningCommand()); // Feature 4: Consensus Mechanism
+  program.addCommand(createDemoDoubleSpendCommand()); // Feature 5: Double-Spend Prevention
+  program.addCommand(createDemoOrderingCommand()); // Feature 6: Global Ordering
+  program.addCommand(createDemoPersistenceCommand()); // Feature 7: Data Persistence
+  program.addCommand(createDemoFullWorkflowCommand()); // Feature 8: Complete Workflow
 
   return program;
 }
