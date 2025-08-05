@@ -8,70 +8,6 @@ import { getBlockchain, handleError } from "../utils";
 import { BaseOptions, DemoTamperOptions } from "../types";
 
 /**
- * Demo double-spend command - Demonstrate double-spend prevention
- */
-export function createDemoDoubleSpendCommand(): Command {
-  return new Command("demo-double-spend")
-    .description("Demonstrate double-spend prevention")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
-    .action((options: BaseOptions) => {
-      try {
-        const bc = getBlockchain(options.database);
-
-        console.log(
-          chalk.magenta("🔬 Demonstrating double-spend prevention...")
-        );
-
-        const results = bc.demonstrateMultipleDoubleSpendScenarios();
-
-        console.log(chalk.blue("\n📋 Double-Spend Prevention Results:"));
-        results.forEach((result, index) => {
-          const status =
-            result.result.success !== false
-              ? chalk.green("✅ PREVENTED")
-              : chalk.red("❌ FAILED");
-
-          console.log(`   ${index + 1}. ${result.scenario}: ${status}`);
-        });
-      } catch (error) {
-        handleError("Demo", error);
-      }
-    });
-}
-
-/**
- * Demo tamper command - Demonstrate tampering detection
- */
-export function createDemoTamperCommand(): Command {
-  return new Command("demo-tamper")
-    .description("Demonstrate tampering detection")
-    .option("-b, --block <index>", "Block index to tamper with", "1")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
-    .action((options: DemoTamperOptions) => {
-      try {
-        const bc = getBlockchain(options.database);
-        const blockIndex = parseInt(options.block || "1");
-
-        console.log(
-          chalk.magenta(
-            `🔬 Demonstrating tampering detection on block #${blockIndex}...`
-          )
-        );
-
-        const detected = bc.demonstrateTampering(blockIndex);
-
-        if (detected) {
-          console.log(chalk.green("✅ Tampering successfully detected!"));
-        } else {
-          console.log(chalk.red("❌ Tampering detection failed!"));
-        }
-      } catch (error) {
-        handleError("Demo", error);
-      }
-    });
-}
-
-/**
  * Demo block structure command - Show detailed block structure (Feature 1)
  */
 export function createDemoBlockStructureCommand(): Command {
@@ -136,92 +72,31 @@ export function createDemoBlockStructureCommand(): Command {
 }
 
 /**
- * Demo mining command - Demonstrate PoW consensus mechanism (Feature 4)
+ * Demo tamper command - Demonstrate tampering detection (Feature 2)
  */
-export function createDemoMiningCommand(): Command {
-  return new Command("demo-mining")
-    .description(
-      "Demonstrate Proof-of-Work consensus mechanism (Requirement 4)"
-    )
+export function createDemoTamperCommand(): Command {
+  return new Command("demo-tamper")
+    .description("Demonstrate tampering detection")
+    .option("-b, --block <index>", "Block index to tamper with", "1")
     .option("-d, --database <path>", "Database file path", "data/blockchain.db")
-    .action(async (options: BaseOptions) => {
+    .action((options: DemoTamperOptions) => {
       try {
         const bc = getBlockchain(options.database);
+        const blockIndex = parseInt(options.block || "1");
 
-        console.log(chalk.magenta("⛏️  Demonstrating Proof-of-Work Mining..."));
         console.log(
-          chalk.blue("\n📋 PoW Consensus Components (Requirement 4):")
-        );
-
-        // Show current difficulty
-        const stats = bc.getExtendedStats();
-        console.log(chalk.cyan("   🔸 Current Mining Difficulty:"));
-        console.log(`     Difficulty: ${stats.currentDifficulty}`);
-        console.log(
-          `     Target: Hash must start with ${stats.currentDifficulty} zeros`
-        );
-
-        // Show mempool
-        const mempool = bc.getTransactionPool();
-        console.log(chalk.cyan("   🔸 Pending Transactions Pool:"));
-        console.log(`     Pending Transactions: ${mempool.size()}`);
-
-        if (mempool.size() === 0) {
-          console.log(
-            chalk.yellow("     ℹ️  Creating a demo transaction for mining...")
-          );
-
-          // Create a demo transaction for mining - using hardcoded addresses for demo
-          const demoTx = bc.createTransaction("alice", "demo-recipient", 10);
-          if (demoTx) {
-            bc.addTransaction(demoTx);
-            console.log(`     ✅ Added demo transaction: 10 coins`);
-          } else {
-            console.log("     ℹ️  No sufficient balance for demo transaction");
-          }
-        }
-
-        console.log(chalk.cyan("   🔸 Mining Process:"));
-        console.log("     1. Select transactions from mempool");
-        console.log("     2. Create candidate block");
-        console.log("     3. Find nonce that produces valid hash");
-        console.log("     4. Validate proof-of-work");
-
-        // Demonstrate mining with progress
-        console.log(chalk.yellow("\n⏳ Starting mining demonstration..."));
-        console.log("     (This may take a moment depending on difficulty)");
-
-        const miningStart = Date.now();
-        const newBlock = await bc.mineBlock("demo-miner");
-        const miningTime = Date.now() - miningStart;
-
-        if (newBlock) {
-          console.log(chalk.green("   ✅ Mining successful!"));
-          console.log(`     Time taken: ${(miningTime / 1000).toFixed(2)}s`);
-          console.log(`     Final nonce: ${newBlock.nonce}`);
-          console.log(`     Block hash: ${newBlock.hash}`);
-          console.log(
-            `     Hash starts with: ${newBlock.hash.substring(0, newBlock.difficulty)} (${newBlock.difficulty} zeros)`
-          );
-
-          // Show difficulty adjustment info
-          const newStats = bc.getExtendedStats();
-          if (newStats.currentDifficulty !== stats.currentDifficulty) {
-            console.log(chalk.cyan("   🔸 Difficulty Adjustment:"));
-            console.log(`     Previous: ${stats.currentDifficulty}`);
-            console.log(`     New: ${newStats.currentDifficulty}`);
-            console.log("     Adjusted based on block timing");
-          }
-        } else {
-          console.log(chalk.red("   ❌ Mining failed"));
-        }
-
-        console.log(chalk.green("\n✅ PoW consensus demonstration complete!"));
-        console.log(
-          chalk.gray(
-            "Mining process, nonce finding, and difficulty adjustment shown."
+          chalk.magenta(
+            `🔬 Demonstrating tampering detection on block #${blockIndex}...`
           )
         );
+
+        const detected = bc.demonstrateTampering(blockIndex);
+
+        if (detected) {
+          console.log(chalk.green("✅ Tampering successfully detected!"));
+        } else {
+          console.log(chalk.red("❌ Tampering detection failed!"));
+        }
       } catch (error) {
         handleError("Demo", error);
       }
@@ -329,6 +204,131 @@ export function createDemoTransactionsCommand(): Command {
             "Transaction creation, mempool management, and block inclusion shown."
           )
         );
+      } catch (error) {
+        handleError("Demo", error);
+      }
+    });
+}
+
+/**
+ * Demo mining command - Demonstrate PoW consensus mechanism (Feature 4)
+ */
+export function createDemoMiningCommand(): Command {
+  return new Command("demo-mining")
+    .description(
+      "Demonstrate Proof-of-Work consensus mechanism (Requirement 4)"
+    )
+    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
+    .action(async (options: BaseOptions) => {
+      try {
+        const bc = getBlockchain(options.database);
+
+        console.log(chalk.magenta("⛏️  Demonstrating Proof-of-Work Mining..."));
+        console.log(
+          chalk.blue("\n📋 PoW Consensus Components (Requirement 4):")
+        );
+
+        // Show current difficulty
+        const stats = bc.getExtendedStats();
+        console.log(chalk.cyan("   🔸 Current Mining Difficulty:"));
+        console.log(`     Difficulty: ${stats.currentDifficulty}`);
+        console.log(
+          `     Target: Hash must start with ${stats.currentDifficulty} zeros`
+        );
+
+        // Show mempool
+        const mempool = bc.getTransactionPool();
+        console.log(chalk.cyan("   🔸 Pending Transactions Pool:"));
+        console.log(`     Pending Transactions: ${mempool.size()}`);
+
+        if (mempool.size() === 0) {
+          console.log(
+            chalk.yellow("     ℹ️  Creating a demo transaction for mining...")
+          );
+
+          // Create a demo transaction for mining - using hardcoded addresses for demo
+          const demoTx = bc.createTransaction("alice", "demo-recipient", 10);
+          if (demoTx) {
+            bc.addTransaction(demoTx);
+            console.log(`     ✅ Added demo transaction: 10 coins`);
+          } else {
+            console.log("     ℹ️  No sufficient balance for demo transaction");
+          }
+        }
+
+        console.log(chalk.cyan("   🔸 Mining Process:"));
+        console.log("     1. Select transactions from mempool");
+        console.log("     2. Create candidate block");
+        console.log("     3. Find nonce that produces valid hash");
+        console.log("     4. Validate proof-of-work");
+
+        // Demonstrate mining with progress
+        console.log(chalk.yellow("\n⏳ Starting mining demonstration..."));
+        console.log("     (This may take a moment depending on difficulty)");
+
+        const miningStart = Date.now();
+        const newBlock = await bc.mineBlock("demo-miner");
+        const miningTime = Date.now() - miningStart;
+
+        if (newBlock) {
+          console.log(chalk.green("   ✅ Mining successful!"));
+          console.log(`     Time taken: ${(miningTime / 1000).toFixed(2)}s`);
+          console.log(`     Final nonce: ${newBlock.nonce}`);
+          console.log(`     Block hash: ${newBlock.hash}`);
+          console.log(
+            `     Hash starts with: ${newBlock.hash.substring(0, newBlock.difficulty)} (${newBlock.difficulty} zeros)`
+          );
+
+          // Show difficulty adjustment info
+          const newStats = bc.getExtendedStats();
+          if (newStats.currentDifficulty !== stats.currentDifficulty) {
+            console.log(chalk.cyan("   🔸 Difficulty Adjustment:"));
+            console.log(`     Previous: ${stats.currentDifficulty}`);
+            console.log(`     New: ${newStats.currentDifficulty}`);
+            console.log("     Adjusted based on block timing");
+          }
+        } else {
+          console.log(chalk.red("   ❌ Mining failed"));
+        }
+
+        console.log(chalk.green("\n✅ PoW consensus demonstration complete!"));
+        console.log(
+          chalk.gray(
+            "Mining process, nonce finding, and difficulty adjustment shown."
+          )
+        );
+      } catch (error) {
+        handleError("Demo", error);
+      }
+    });
+}
+
+/**
+ * Demo double-spend command - Demonstrate double-spend prevention (Feature 5)
+ */
+export function createDemoDoubleSpendCommand(): Command {
+  return new Command("demo-double-spend")
+    .description("Demonstrate double-spend prevention")
+    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
+    .action((options: BaseOptions) => {
+      try {
+        const bc = getBlockchain(options.database);
+
+        console.log(
+          chalk.magenta("🔬 Demonstrating double-spend prevention...")
+        );
+
+        const results = bc.demonstrateMultipleDoubleSpendScenarios();
+
+        console.log(chalk.blue("\n📋 Double-Spend Prevention Results:"));
+        results.forEach((result, index) => {
+          const status =
+            result.result.success !== false
+              ? chalk.green("✅ PREVENTED")
+              : chalk.red("❌ FAILED");
+
+          console.log(`   ${index + 1}. ${result.scenario}: ${status}`);
+        });
       } catch (error) {
         handleError("Demo", error);
       }
