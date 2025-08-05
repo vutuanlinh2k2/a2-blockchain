@@ -373,6 +373,14 @@ export class UTXOSet {
   }
 
   /**
+   * Gets all UTXOs in the set.
+   * @returns Array of all unspent UTXOs
+   */
+  public getAllUTXOs(): UTXO[] {
+    return Array.from(this.utxos.values()).filter((utxo) => !utxo.spent);
+  }
+
+  /**
    * Clears all UTXOs from the set.
    */
   public clear(): void {

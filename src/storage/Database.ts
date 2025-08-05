@@ -49,6 +49,7 @@ export class BlockchainDB {
         id TEXT PRIMARY KEY,
         block_id INTEGER,
         timestamp INTEGER NOT NULL,
+        tx_order INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (block_id) REFERENCES blocks(id)
       );
 

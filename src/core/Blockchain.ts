@@ -1,7 +1,8 @@
 import { Block } from "./Block";
-import { Transaction, TransactionPool, UTXOSet } from "./Transaction";
+import { Transaction, TransactionPool, UTXOSet, UTXO } from "./Transaction";
 import { ProofOfWork } from "./consensus/ProofOfWork";
 import { BlockchainDB } from "../storage/Database";
+import { BlockchainStorage } from "../storage/BlockchainStorage";
 import {
   TransactionValidator,
   ValidationResult,
@@ -48,6 +49,7 @@ export interface ResolvedBlockchainConfig {
 export class Blockchain {
   private blocks: Block[] = [];
   private readonly db: BlockchainDB;
+  private readonly storage: BlockchainStorage;
   private readonly transactionPool: TransactionPool;
   private readonly utxoSet: UTXOSet;
   private readonly proofOfWork: ProofOfWork;
@@ -68,27 +70,88 @@ export class Blockchain {
     } as ResolvedBlockchainConfig;
 
     this.db = new BlockchainDB(dbPath);
+    this.storage = new BlockchainStorage(this.db);
     this.transactionPool = new TransactionPool();
     this.utxoSet = new UTXOSet();
     this.proofOfWork = new ProofOfWork();
     this.transactionValidator = new TransactionValidator(this.utxoSet);
 
-    // Initialize with genesis block if chain is empty
+    // Load existing blockchain from database or initialize with genesis block
     this.initializeChain();
   }
 
   /**
-   * Initializes the blockchain with the genesis block if it doesn't exist.
+   * Initializes the blockchain by loading from database or creating genesis block.
    */
   private initializeChain(): void {
-    if (this.blocks.length === 0) {
-      const genesisBlock = Block.createGenesis(this.config.genesisMessage);
-      this.blocks.push(genesisBlock);
-      this.updateUTXOSet(genesisBlock);
+    console.log("🔄 Initializing blockchain...");
 
-      console.log("🎉 Blockchain initialized with genesis block");
-      console.log(`   Hash: ${genesisBlock.hash}`);
+    // Try to load existing blockchain from database
+    const loadedBlocks = this.storage.loadBlocks();
+
+    if (loadedBlocks.length > 0) {
+      console.log(
+        `📖 Loaded existing blockchain with ${loadedBlocks.length} blocks`
+      );
+      this.blocks = loadedBlocks;
+
+      // Reconstruct UTXO set from database
+      this.reconstructUTXOSetFromDatabase();
+
+      // Validate the loaded chain
+      if (!this.validateChain()) {
+        console.error("❌ Loaded blockchain is invalid! Starting fresh.");
+        this.blocks = [];
+        this.utxoSet.clear();
+        this.createGenesisBlock();
+      } else {
+        console.log("✅ Loaded blockchain validated successfully");
+
+        // Save chain tip to state
+        this.storage.saveChainState("chain_tip", this.getLatestBlock().hash);
+        this.storage.saveChainState(
+          "chain_length",
+          this.blocks.length.toString()
+        );
+      }
+    } else {
+      console.log("📝 No existing blockchain found, creating genesis block");
+      this.createGenesisBlock();
     }
+  }
+
+  /**
+   * Creates and saves the genesis block.
+   */
+  private createGenesisBlock(): void {
+    const genesisBlock = Block.createGenesis(this.config.genesisMessage);
+    this.blocks.push(genesisBlock);
+    this.updateUTXOSet(genesisBlock);
+
+    // Save genesis block to database
+    this.storage.saveBlock(genesisBlock);
+    this.storage.saveChainState("chain_tip", genesisBlock.hash);
+    this.storage.saveChainState("chain_length", "1");
+    this.storage.saveChainState("genesis_hash", genesisBlock.hash);
+
+    console.log("🎉 Genesis block created and saved");
+    console.log(`   Hash: ${genesisBlock.hash}`);
+  }
+
+  /**
+   * Reconstructs the UTXO set from the database.
+   */
+  private reconstructUTXOSetFromDatabase(): void {
+    console.log("🔄 Reconstructing UTXO set from database...");
+
+    this.utxoSet.clear();
+    const loadedUTXOs = this.storage.loadUTXOs();
+
+    for (const utxo of loadedUTXOs) {
+      this.utxoSet.addUTXO(utxo);
+    }
+
+    console.log(`💰 Reconstructed UTXO set with ${loadedUTXOs.length} UTXOs`);
   }
 
   /**
@@ -131,13 +194,27 @@ export class Blockchain {
     // Add the block to the chain
     this.blocks.push(block);
 
+    // Save block to database
+    if (!this.storage.saveBlock(block)) {
+      // Rollback if database save fails
+      this.blocks.pop();
+      console.log(
+        `❌ Failed to save block ${block.index} to database, rolling back`
+      );
+      return false;
+    }
+
     // Update UTXO set
     this.updateUTXOSet(block);
 
     // Remove included transactions from the pool
     this.removeTransactionsFromPool(block);
 
-    console.log(`✅ Block ${block.index} added to chain`);
+    // Update chain state in database
+    this.storage.saveChainState("chain_tip", block.hash);
+    this.storage.saveChainState("chain_length", this.blocks.length.toString());
+
+    console.log(`✅ Block ${block.index} added to chain and saved to database`);
     console.log(`   Hash: ${block.hash}`);
     console.log(`   Transactions: ${block.getTransactionCount()}`);
 
@@ -212,18 +289,24 @@ export class Blockchain {
       // Spend UTXOs referenced by inputs
       for (const input of transaction.inputs) {
         this.utxoSet.spendUTXO(input.txId, input.outputIndex, transaction.id);
+        // Also mark as spent in database
+        this.storage.markUTXOSpent(
+          input.txId,
+          input.outputIndex,
+          transaction.id
+        );
       }
 
       // Add new UTXOs from outputs
       transaction.outputs.forEach((output, index) => {
-        const utxo = {
-          txId: transaction.id,
-          outputIndex: index,
-          address: output.address,
-          amount: output.amount,
-          spent: false,
-        };
-        this.utxoSet.addUTXO(utxo as any);
+        const utxo = new UTXO(
+          transaction.id,
+          index,
+          output.address,
+          output.amount,
+          false
+        );
+        this.utxoSet.addUTXO(utxo);
       });
     }
   }
@@ -1069,6 +1152,170 @@ export class Blockchain {
       console.log("❌ Tampering detection failed!");
       return false;
     }
+  }
+
+  /**
+   * Exports the entire blockchain to a file.
+   * @param filePath - Path where to save the backup file
+   * @returns True if export was successful
+   */
+  public exportToFile(filePath: string): boolean {
+    console.log(`📤 Exporting blockchain to ${filePath}...`);
+    const success = this.storage.exportToFile(filePath);
+    if (success) {
+      console.log("✅ Blockchain export completed successfully");
+    } else {
+      console.log("❌ Blockchain export failed");
+    }
+    return success;
+  }
+
+  /**
+   * Imports blockchain data from a file.
+   * WARNING: This will replace the current blockchain!
+   * @param filePath - Path to the backup file to import
+   * @returns True if import was successful
+   */
+  public importFromFile(filePath: string): boolean {
+    console.log(`📥 Importing blockchain from ${filePath}...`);
+    console.log("⚠️  WARNING: This will replace the current blockchain!");
+
+    const success = this.storage.importFromFile(filePath);
+    if (success) {
+      // Reload the blockchain from database
+      console.log("🔄 Reloading blockchain from database...");
+      this.initializeChain();
+      console.log("✅ Blockchain import and reload completed successfully");
+    } else {
+      console.log("❌ Blockchain import failed");
+    }
+    return success;
+  }
+
+  /**
+   * Gets comprehensive statistics about the blockchain including database stats.
+   * @returns Extended chain statistics
+   */
+  public getExtendedStats(): ChainStats & {
+    databaseStats: {
+      blockCount: number;
+      transactionCount: number;
+      utxoCount: number;
+      spentUtxoCount: number;
+      chainStateCount: number;
+    };
+    chainState: {
+      tip: string | null;
+      length: string | null;
+      genesisHash: string | null;
+    };
+  } {
+    const basicStats = this.getStats();
+    const databaseStats = this.storage.getDatabaseStats();
+
+    const chainState = {
+      tip: this.storage.loadChainState("chain_tip"),
+      length: this.storage.loadChainState("chain_length"),
+      genesisHash: this.storage.loadChainState("genesis_hash"),
+    };
+
+    return {
+      ...basicStats,
+      databaseStats,
+      chainState,
+    };
+  }
+
+  /**
+   * Validates chain integrity against database.
+   * @returns True if both in-memory and database state are consistent
+   */
+  public validatePersistenceIntegrity(): boolean {
+    console.log("🔍 Validating persistence integrity...");
+
+    try {
+      // Check that in-memory blocks match database
+      const dbBlocks = this.storage.loadBlocks();
+
+      if (dbBlocks.length !== this.blocks.length) {
+        console.log(
+          `❌ Block count mismatch: memory=${this.blocks.length}, db=${dbBlocks.length}`
+        );
+        return false;
+      }
+
+      for (let i = 0; i < this.blocks.length; i++) {
+        const memoryBlock = this.blocks[i];
+        const dbBlock = dbBlocks[i];
+
+        if (memoryBlock.hash !== dbBlock.hash) {
+          console.log(
+            `❌ Block ${i} hash mismatch: memory=${memoryBlock.hash}, db=${dbBlock.hash}`
+          );
+          return false;
+        }
+      }
+
+      // Check UTXO set consistency
+      const dbUTXOs = this.storage.loadUTXOs();
+      const memoryUTXOCount = this.utxoSet.size();
+
+      if (dbUTXOs.length !== memoryUTXOCount) {
+        console.log(
+          `❌ UTXO count mismatch: memory=${memoryUTXOCount}, db=${dbUTXOs.length}`
+        );
+        return false;
+      }
+
+      // Check chain state
+      const dbChainLength = this.storage.loadChainState("chain_length");
+      const actualLength = this.blocks.length.toString();
+
+      if (dbChainLength !== actualLength) {
+        console.log(
+          `❌ Chain length mismatch: memory=${actualLength}, db=${dbChainLength}`
+        );
+        return false;
+      }
+
+      console.log("✅ Persistence integrity validation passed");
+      return true;
+    } catch (error) {
+      console.error("❌ Persistence integrity validation failed:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Forces a complete sync between memory and database.
+   * Rebuilds memory state from database.
+   */
+  public syncFromDatabase(): boolean {
+    try {
+      console.log("🔄 Syncing blockchain from database...");
+
+      // Clear memory state
+      this.blocks = [];
+      this.utxoSet.clear();
+      this.transactionPool.clear();
+
+      // Reload from database
+      this.initializeChain();
+
+      console.log("✅ Database sync completed successfully");
+      return true;
+    } catch (error) {
+      console.error("❌ Database sync failed:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Gets the blockchain storage instance for direct access.
+   * @returns The blockchain storage instance
+   */
+  public getStorage(): BlockchainStorage {
+    return this.storage;
   }
 
   /**

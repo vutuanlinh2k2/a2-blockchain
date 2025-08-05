@@ -177,8 +177,8 @@ export class TransactionValidator {
 
     // Calculate total input value from UTXOs
     for (const input of transaction.inputs) {
-      const utxos = this.utxoSet.getUTXOsForAddress(""); // Get all UTXOs
-      const utxo = utxos.find(
+      const allUTXOs = this.utxoSet.getAllUTXOs(); // Get all UTXOs
+      const utxo = allUTXOs.find(
         (u) => u.txId === input.txId && u.outputIndex === input.outputIndex
       );
 
