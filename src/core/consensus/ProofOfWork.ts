@@ -287,59 +287,6 @@ export class ProofOfWork {
   }
 
   /**
-   * Performs a quick mining difficulty test to measure hash rate.
-   * @param testDifficulty - Difficulty level to test (default: 1)
-   * @param maxAttempts - Maximum attempts before giving up (default: 100000)
-   * @returns Hash rate in hashes per second
-   */
-  public async benchmarkHashRate(
-    testDifficulty: number = 1,
-    maxAttempts: number = 100000
-  ): Promise<number> {
-    console.log(`🏃 Benchmarking hash rate (difficulty ${testDifficulty})...`);
-
-    // Create a simple test block
-    const testBlock = Block.createCandidate(
-      999999, // Test block index
-      [], // No transactions
-      "0".repeat(64), // Dummy previous hash
-      testDifficulty
-    );
-
-    const startTime = Date.now();
-    let attempts = 0;
-    let currentBlock = testBlock;
-
-    while (attempts < maxAttempts) {
-      if (currentBlock.hasValidProofOfWork()) {
-        const endTime = Date.now();
-        const hashRate = Hash.calculateHashRate(
-          attempts + 1,
-          endTime - startTime
-        );
-
-        console.log(`✅ Benchmark complete: ${Hash.formatHashRate(hashRate)}`);
-        return hashRate;
-      }
-
-      attempts++;
-      currentBlock = currentBlock.incrementNonce();
-    }
-
-    // If we reach here, estimate based on attempts made
-    const endTime = Date.now();
-    const partialHashRate = Hash.calculateHashRate(
-      attempts,
-      endTime - startTime
-    );
-
-    console.log(
-      `⚠️  Benchmark incomplete: ~${Hash.formatHashRate(partialHashRate)} (estimated)`
-    );
-    return partialHashRate;
-  }
-
-  /**
    * Gets the current configuration.
    * @returns The difficulty configuration
    */
@@ -362,30 +309,5 @@ export class ProofOfWork {
     difficulty: number
   ): Block {
     return Block.createCandidate(index, transactions, previousHash, difficulty);
-  }
-
-  /**
-   * Validates the mining configuration.
-   * @returns True if configuration is valid
-   */
-  public validateConfig(): boolean {
-    const { targetBlockTime, adjustmentInterval, maxAdjustment } = this.config;
-
-    if (targetBlockTime <= 0) {
-      console.log("❌ Invalid config: targetBlockTime must be positive");
-      return false;
-    }
-
-    if (adjustmentInterval <= 0) {
-      console.log("❌ Invalid config: adjustmentInterval must be positive");
-      return false;
-    }
-
-    if (maxAdjustment <= 1) {
-      console.log("❌ Invalid config: maxAdjustment must be greater than 1");
-      return false;
-    }
-
-    return true;
   }
 }

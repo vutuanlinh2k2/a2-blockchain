@@ -412,7 +412,6 @@ export class Blockchain {
 
     // Store the original chain for potential rollback
     const originalChain = [...this.blocks];
-    const originalUTXOSet = new UTXOSet();
 
     try {
       // Perform chain reorganization
@@ -1077,22 +1076,5 @@ export class Blockchain {
    */
   public close(): void {
     this.db.close();
-  }
-
-  /**
-   * Returns a formatted string representation of the blockchain.
-   * @param includeTransactions - Whether to include transaction details
-   * @returns Formatted blockchain string
-   */
-  public toString(includeTransactions: boolean = false): string {
-    let result = `Blockchain (${this.blocks.length} blocks)\n`;
-    result += "=".repeat(50) + "\n";
-
-    for (const block of this.blocks) {
-      result += block.toString(includeTransactions) + "\n";
-      result += "-".repeat(50) + "\n";
-    }
-
-    return result;
   }
 }

@@ -195,24 +195,6 @@ export class Block {
   }
 
   /**
-   * Gets a specific transaction by its ID.
-   * @param transactionId - The ID of the transaction to find
-   * @returns The transaction if found, undefined otherwise
-   */
-  public getTransaction(transactionId: string): Transaction | undefined {
-    return this.transactions.find((tx) => tx.id === transactionId);
-  }
-
-  /**
-   * Checks if this block contains a specific transaction.
-   * @param transactionId - The ID of the transaction to check for
-   * @returns True if the transaction is in this block
-   */
-  public hasTransaction(transactionId: string): boolean {
-    return this.getTransaction(transactionId) !== undefined;
-  }
-
-  /**
    * Gets the total value of all transaction outputs in this block.
    * This can be useful for calculating block rewards and fees.
    * @returns The total output value
@@ -296,31 +278,6 @@ export class Block {
 
     console.log(`🎉 Genesis block created: ${genesisBlock.hash}`);
     return genesisBlock;
-  }
-
-  /**
-   * Returns a formatted string representation of the block for display.
-   * @param includeTransactions - Whether to include transaction details
-   * @returns A formatted string representation
-   */
-  public toString(includeTransactions: boolean = false): string {
-    let result = `Block #${this.index}\n`;
-    result += `Hash: ${this.hash}\n`;
-    result += `Previous Hash: ${this.previousHash}\n`;
-    result += `Timestamp: ${new Date(this.timestamp).toISOString()}\n`;
-    result += `Merkle Root: ${this.merkleRoot}\n`;
-    result += `Nonce: ${this.nonce}\n`;
-    result += `Difficulty: ${this.difficulty}\n`;
-    result += `Transactions: ${this.transactions.length}\n`;
-
-    if (includeTransactions && this.transactions.length > 0) {
-      result += `\nTransactions:\n`;
-      this.transactions.forEach((tx, index) => {
-        result += `  ${index + 1}. ${tx.id} (${tx.outputs.length} outputs)\n`;
-      });
-    }
-
-    return result;
   }
 
   /**

@@ -18,13 +18,6 @@ export class MerkleNode {
     this.left = left;
     this.right = right;
   }
-
-  /**
-   * Checks if this node is a leaf node (has no children).
-   */
-  public isLeaf(): boolean {
-    return this.left === null && this.right === null;
-  }
 }
 
 /**
@@ -105,105 +98,6 @@ export class MerkleTree {
   }
 
   /**
-   * Gets the root node of the Merkle tree.
-   * @returns The root node, or null if the tree is empty
-   */
-  public getRoot(): MerkleNode | null {
-    return this.root;
-  }
-
-  /**
-   * Generates a Merkle proof for a specific data item.
-   * The proof can be used to verify that the data item is included in the tree.
-   * @param data - The data item to generate a proof for
-   * @returns Array of hashes representing the proof path, or null if data not found
-   */
-  public getProof(data: string): string[] | null {
-    const targetHash = this.hash(data);
-    const leafIndex = this.leaves.findIndex((leaf) => leaf.hash === targetHash);
-
-    if (leafIndex === -1) {
-      return null; // Data not found in tree
-    }
-
-    return this.buildProof(leafIndex, this.leaves.length);
-  }
-
-  /**
-   * Builds a proof path for a specific leaf index.
-   * @param leafIndex - The index of the leaf to build a proof for
-   * @param levelSize - The number of nodes at the current level
-   * @returns Array of hashes in the proof path
-   */
-  private buildProof(leafIndex: number, levelSize: number): string[] {
-    const proof: string[] = [];
-    let currentIndex = leafIndex;
-    let currentLevelSize = levelSize;
-
-    // Build proof by traversing up the tree
-    while (currentLevelSize > 1) {
-      // Determine if we need the left or right sibling
-      const isRightNode = currentIndex % 2 === 1;
-      const siblingIndex = isRightNode ? currentIndex - 1 : currentIndex + 1;
-
-      // Find the sibling hash (if it exists)
-      if (siblingIndex < currentLevelSize) {
-        const siblingHash = this.getHashAtLevel(siblingIndex, currentLevelSize);
-        proof.push(siblingHash);
-      }
-
-      // Move to the next level
-      currentIndex = Math.floor(currentIndex / 2);
-      currentLevelSize = Math.ceil(currentLevelSize / 2);
-    }
-
-    return proof;
-  }
-
-  /**
-   * Gets the hash of a node at a specific position in a specific level.
-   * @param index - The index of the node in the level
-   * @param levelSize - The size of the level
-   * @returns The hash of the node
-   */
-  private getHashAtLevel(index: number, levelSize: number): string {
-    // This is a simplified implementation
-    // In a full implementation, you'd traverse the tree to find the actual node
-    if (levelSize === this.leaves.length) {
-      return this.leaves[index].hash;
-    }
-
-    // For upper levels, we'd need to calculate or store the intermediate hashes
-    // This is a placeholder - in a production implementation, you'd store or calculate these
-    return "placeholder_hash";
-  }
-
-  /**
-   * Verifies a Merkle proof for a specific data item.
-   * @param data - The original data item
-   * @param proof - The proof array returned by getProof()
-   * @param rootHash - The expected root hash
-   * @returns True if the proof is valid, false otherwise
-   */
-  public static verifyProof(
-    data: string,
-    proof: string[],
-    rootHash: string
-  ): boolean {
-    let currentHash = createHash("sha256").update(data).digest("hex");
-
-    // Traverse up the tree using the proof
-    for (const proofHash of proof) {
-      // Combine with sibling hash (order matters in real implementation)
-      currentHash = createHash("sha256")
-        .update(currentHash + proofHash)
-        .digest("hex");
-    }
-
-    return currentHash === rootHash;
-  }
-
-  /**
    * Creates a Merkle tree from an array of transaction IDs.
    * This is a convenience method specifically for blockchain transactions.
    * @param transactionIds - Array of transaction IDs
@@ -216,25 +110,5 @@ export class MerkleTree {
     }
 
     return new MerkleTree(transactionIds);
-  }
-
-  /**
-   * Gets the number of leaf nodes in the tree.
-   * @returns The number of leaves
-   */
-  public getLeafCount(): number {
-    return this.leaves.length;
-  }
-
-  /**
-   * Returns a string representation of the tree (for debugging).
-   * @returns A formatted string showing the tree structure
-   */
-  public toString(): string {
-    if (!this.root) {
-      return "Empty tree";
-    }
-
-    return `Merkle Tree (${this.getLeafCount()} leaves)\nRoot: ${this.getRootHash()}`;
   }
 }

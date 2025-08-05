@@ -15,8 +15,7 @@ export class BlockchainDB {
    */
   constructor(dbPath: string = "data/blockchain.db") {
     // Initialize the database connection.
-    // `verbose: console.log` is useful for debugging SQL queries during development.
-    this.db = new Database(dbPath, { verbose: console.log });
+    this.db = new Database(dbPath);
 
     // Ensure the database schema is created on initialization.
     this.initSchema();

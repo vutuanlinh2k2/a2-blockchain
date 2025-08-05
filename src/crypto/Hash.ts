@@ -1,4 +1,4 @@
-import { createHash, createHmac } from "crypto";
+import { createHash } from "crypto";
 
 /**
  * Cryptographic utility class for hashing operations.
@@ -15,17 +15,6 @@ export class Hash {
   }
 
   /**
-   * Calculates double SHA-256 hash (SHA-256 of SHA-256).
-   * This is commonly used in Bitcoin for additional security.
-   * @param data - The data to hash
-   * @returns The hexadecimal double-hash string
-   */
-  public static doubleSha256(data: string | Buffer): string {
-    const firstHash = Hash.sha256(data);
-    return Hash.sha256(firstHash);
-  }
-
-  /**
    * Creates a hash from multiple pieces of data concatenated together.
    * @param data - Array of data pieces to concatenate and hash
    * @returns The hexadecimal hash string
@@ -33,16 +22,6 @@ export class Hash {
   public static combineAndHash(data: (string | number)[]): string {
     const combined = data.join("");
     return Hash.sha256(combined);
-  }
-
-  /**
-   * Creates an HMAC (Hash-based Message Authentication Code).
-   * @param key - The secret key
-   * @param data - The data to authenticate
-   * @returns The hexadecimal HMAC string
-   */
-  public static hmacSha256(key: string, data: string): string {
-    return createHmac("sha256", key).update(data).digest("hex");
   }
 
   /**
@@ -92,53 +71,6 @@ export class Hash {
    */
   public static getDifficultyTarget(difficulty: number): string {
     return "0".repeat(difficulty) + "f".repeat(64 - difficulty);
-  }
-
-  /**
-   * Compares two hashes numerically (treats them as big integers).
-   * @param hash1 - First hash
-   * @param hash2 - Second hash
-   * @returns -1 if hash1 < hash2, 0 if equal, 1 if hash1 > hash2
-   */
-  public static compareHashes(hash1: string, hash2: string): number {
-    // Convert to BigInt for comparison
-    const num1 = BigInt("0x" + hash1);
-    const num2 = BigInt("0x" + hash2);
-
-    if (num1 < num2) return -1;
-    if (num1 > num2) return 1;
-    return 0;
-  }
-
-  /**
-   * Creates a hash from an object by serializing it to JSON first.
-   * @param obj - The object to hash
-   * @returns The hexadecimal hash string
-   */
-  public static hashObject(obj: any): string {
-    const jsonString = JSON.stringify(obj);
-    return Hash.sha256(jsonString);
-  }
-
-  /**
-   * Creates a deterministic hash from multiple inputs.
-   * Used for creating consistent hashes from block data.
-   * @param inputs - Object containing the inputs to hash
-   * @returns The hexadecimal hash string
-   */
-  public static hashInputs(inputs: Record<string, any>): string {
-    // Sort keys to ensure deterministic order
-    const sortedKeys = Object.keys(inputs).sort();
-    const orderedData = sortedKeys.map((key) => `${key}:${inputs[key]}`);
-    return Hash.sha256(orderedData.join("|"));
-  }
-
-  /**
-   * Generates a random nonce value for mining.
-   * @returns A random number suitable for use as a nonce
-   */
-  public static generateNonce(): number {
-    return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
   }
 
   /**

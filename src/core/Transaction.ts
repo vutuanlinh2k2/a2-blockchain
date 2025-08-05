@@ -61,16 +61,6 @@ export class Transaction {
   }
 
   /**
-   * Gets the total amount being spent in this transaction.
-   * @returns Total input amount
-   */
-  public getTotalInputAmount(): number {
-    // Note: In a real implementation, we'd need to look up the UTXO amounts
-    // For now, we'll calculate from outputs for demonstration
-    return this.outputs.reduce((sum, output) => sum + output.amount, 0);
-  }
-
-  /**
    * Gets the total amount being sent in this transaction.
    * @returns Total output amount
    */
@@ -223,8 +213,7 @@ export class TransactionPool {
       return false;
     }
 
-    // TODO: Add double-spend detection here
-    // For now, we'll add the transaction
+    // Add the transaction
     this.transactions.set(transaction.id, transaction);
     console.log(`✅ Transaction added to pool: ${transaction.id}`);
     return true;
@@ -249,15 +238,6 @@ export class TransactionPool {
    */
   public getAllTransactions(): Transaction[] {
     return Array.from(this.transactions.values());
-  }
-
-  /**
-   * Gets a specific transaction by ID.
-   * @param transactionId - The transaction ID to look up
-   * @returns The transaction if found, undefined otherwise
-   */
-  public getTransaction(transactionId: string): Transaction | undefined {
-    return this.transactions.get(transactionId);
   }
 
   /**
