@@ -2,6 +2,11 @@ import { Block } from "./Block";
 import { Transaction, TransactionPool, UTXOSet } from "./Transaction";
 import { ProofOfWork } from "./consensus/ProofOfWork";
 import { BlockchainDB } from "../storage/Database";
+import {
+  TransactionValidator,
+  ValidationResult,
+  DoubleSpendAttempt,
+} from "./TransactionValidator";
 
 /**
  * Statistics about the current state of the blockchain.
@@ -47,6 +52,7 @@ export class Blockchain {
   private readonly utxoSet: UTXOSet;
   private readonly proofOfWork: ProofOfWork;
   private readonly config: ResolvedBlockchainConfig;
+  private readonly transactionValidator: TransactionValidator;
 
   /**
    * Creates a new blockchain instance.
@@ -65,6 +71,7 @@ export class Blockchain {
     this.transactionPool = new TransactionPool();
     this.utxoSet = new UTXOSet();
     this.proofOfWork = new ProofOfWork();
+    this.transactionValidator = new TransactionValidator(this.utxoSet);
 
     // Initialize with genesis block if chain is empty
     this.initializeChain();
@@ -228,6 +235,7 @@ export class Blockchain {
   private removeTransactionsFromPool(block: Block): void {
     for (const transaction of block.transactions) {
       this.transactionPool.removeTransaction(transaction.id);
+      this.transactionValidator.removeFromMempool(transaction.id);
     }
   }
 
@@ -297,25 +305,39 @@ export class Blockchain {
   }
 
   /**
-   * Adds a transaction to the transaction pool.
+   * Adds a transaction to the transaction pool with comprehensive validation.
    * @param transaction - The transaction to add
-   * @returns True if the transaction was added successfully
+   * @returns ValidationResult with detailed feedback
    */
-  public addTransaction(transaction: Transaction): boolean {
-    // Validate transaction
-    if (!transaction.isValid()) {
-      console.log(`❌ Invalid transaction: ${transaction.id}`);
-      return false;
+  public addTransaction(transaction: Transaction): ValidationResult {
+    console.log(`🔍 Validating transaction: ${transaction.id}`);
+
+    // Comprehensive validation including double-spend checks
+    const validationResult =
+      this.transactionValidator.validateTransaction(transaction);
+
+    if (validationResult.isValid) {
+      // Add to transaction pool
+      const added = this.transactionPool.addTransaction(transaction);
+      if (added) {
+        // Add to validator's mempool for conflict detection
+        this.transactionValidator.addToMempool(transaction);
+        console.log(`✅ Transaction added to pool: ${transaction.id}`);
+
+        // Log any warnings
+        if (validationResult.warnings.length > 0) {
+          console.log(`⚠️  Warnings: ${validationResult.warnings.join(", ")}`);
+        }
+      } else {
+        validationResult.isValid = false;
+        validationResult.errors.push("Failed to add transaction to pool");
+      }
+    } else {
+      console.log(`❌ Transaction rejected: ${transaction.id}`);
+      console.log(`   Errors: ${validationResult.errors.join(", ")}`);
     }
 
-    // Check that inputs reference valid UTXOs
-    if (!this.utxoSet.canSpendTransaction(transaction)) {
-      console.log(`❌ Transaction references invalid UTXOs: ${transaction.id}`);
-      return false;
-    }
-
-    // Add to transaction pool
-    return this.transactionPool.addTransaction(transaction);
+    return validationResult;
   }
 
   /**
@@ -611,6 +633,317 @@ export class Blockchain {
    */
   public getTransactionPool(): TransactionPool {
     return this.transactionPool;
+  }
+
+  /**
+   * Gets double-spend prevention statistics.
+   * @returns Statistics about double-spend attempts and prevention
+   */
+  public getDoubleSpendStats(): {
+    validationStats: any;
+    doubleSpendAttempts: DoubleSpendAttempt[];
+    utxoSetSize: number;
+  } {
+    return {
+      validationStats: this.transactionValidator.getValidationStats(),
+      doubleSpendAttempts: this.transactionValidator.getDoubleSpendAttempts(),
+      utxoSetSize: this.utxoSet.size(),
+    };
+  }
+
+  /**
+   * Creates a transaction for testing purposes.
+   * @param fromAddress - Address sending funds (must have UTXOs)
+   * @param toAddress - Address receiving funds
+   * @param amount - Amount to send
+   * @returns Created transaction or null if insufficient funds
+   */
+  public createTransaction(
+    fromAddress: string,
+    toAddress: string,
+    amount: number
+  ): Transaction | null {
+    console.log(
+      `💸 Creating transaction: ${fromAddress} → ${toAddress} (${amount})`
+    );
+
+    // Get UTXOs for the sender
+    const senderUTXOs = this.utxoSet.getUTXOsForAddress(fromAddress);
+
+    if (senderUTXOs.length === 0) {
+      console.log(`❌ No UTXOs found for address: ${fromAddress}`);
+      return null;
+    }
+
+    // Calculate total available balance
+    const totalBalance = senderUTXOs.reduce(
+      (sum, utxo) => sum + utxo.amount,
+      0
+    );
+
+    if (totalBalance < amount) {
+      console.log(
+        `❌ Insufficient balance: need ${amount}, have ${totalBalance}`
+      );
+      return null;
+    }
+
+    // Select UTXOs to spend (simple strategy: use first available)
+    let selectedValue = 0;
+    const inputUTXOs = [];
+
+    for (const utxo of senderUTXOs) {
+      inputUTXOs.push(utxo);
+      selectedValue += utxo.amount;
+
+      if (selectedValue >= amount) {
+        break;
+      }
+    }
+
+    // Create transaction inputs
+    const inputs = inputUTXOs.map((utxo) => ({
+      txId: utxo.txId,
+      outputIndex: utxo.outputIndex,
+    }));
+
+    // Create transaction outputs
+    const outputs = [
+      { address: toAddress, amount }, // Payment to recipient
+    ];
+
+    // Add change output if necessary
+    const change = selectedValue - amount;
+    if (change > 0) {
+      outputs.push({ address: fromAddress, amount: change }); // Change back to sender
+    }
+
+    const transaction = new Transaction(inputs, outputs);
+
+    console.log(`✅ Transaction created: ${transaction.id}`);
+    console.log(`   Inputs: ${inputs.length}, Outputs: ${outputs.length}`);
+    console.log(
+      `   Total Input: ${selectedValue}, Total Output: ${amount + change}`
+    );
+
+    return transaction;
+  }
+
+  /**
+   * Demonstrates comprehensive double-spend prevention.
+   * Creates a scenario and shows how the system prevents double-spending.
+   * @returns Detailed demonstration results
+   */
+  public demonstrateDoubleSpendPrevention(): {
+    success: boolean;
+    originalTx: Transaction | null;
+    conflictingTx: Transaction | null;
+    validationResults: {
+      original: ValidationResult;
+      conflicting: ValidationResult;
+    } | null;
+    scenario: string;
+  } {
+    console.log("🔬 Demonstrating comprehensive double-spend prevention...");
+
+    // Find an address with UTXOs for testing
+    const allAddresses = this.getAllAddressesWithBalance();
+
+    if (allAddresses.length === 0) {
+      console.log(
+        "❌ No addresses with balance found. Mine some blocks first."
+      );
+      return {
+        success: false,
+        originalTx: null,
+        conflictingTx: null,
+        validationResults: null,
+        scenario: "No addresses with balance available for testing",
+      };
+    }
+
+    const testAddress = allAddresses[0];
+    const balance = this.getBalance(testAddress.address);
+
+    console.log(
+      `📝 Using test address: ${testAddress.address} (balance: ${balance})`
+    );
+
+    // Create original legitimate transaction
+    const originalTx = this.createTransaction(
+      testAddress.address,
+      "legitimate-recipient",
+      Math.min(50, Math.floor(balance / 2)) // Send half of balance or 50, whichever is smaller
+    );
+
+    if (!originalTx) {
+      return {
+        success: false,
+        originalTx: null,
+        conflictingTx: null,
+        validationResults: null,
+        scenario: "Failed to create original transaction",
+      };
+    }
+
+    console.log("📋 Scenario: Attempting to spend the same UTXOs twice");
+
+    // Add original transaction to blockchain (this should succeed)
+    const originalValidation = this.addTransaction(originalTx);
+
+    // Create conflicting transaction using the same inputs
+    const conflictingTx = new Transaction(
+      originalTx.inputs, // Same inputs = double-spend attempt!
+      [
+        {
+          address: "attacker-address",
+          amount: originalTx.getTotalOutputAmount(),
+        },
+      ]
+    );
+
+    console.log(
+      `🚨 Attempting double-spend with transaction: ${conflictingTx.id}`
+    );
+
+    // Try to add conflicting transaction (this should fail)
+    const conflictingValidation = this.addTransaction(conflictingTx);
+
+    // Analysis
+    const preventionSuccessful =
+      originalValidation.isValid && !conflictingValidation.isValid;
+
+    console.log("\n📊 Double-Spend Prevention Analysis:");
+    console.log(`   Original transaction valid: ${originalValidation.isValid}`);
+    console.log(
+      `   Conflicting transaction valid: ${conflictingValidation.isValid}`
+    );
+    console.log(
+      `   Prevention successful: ${preventionSuccessful ? "✅ YES" : "❌ NO"}`
+    );
+
+    if (conflictingValidation.errors.length > 0) {
+      console.log(
+        `   Prevention mechanism: ${conflictingValidation.errors.join(", ")}`
+      );
+    }
+
+    return {
+      success: preventionSuccessful,
+      originalTx,
+      conflictingTx,
+      validationResults: {
+        original: originalValidation,
+        conflicting: conflictingValidation,
+      },
+      scenario: "Same UTXO spent in two different transactions",
+    };
+  }
+
+  /**
+   * Gets all addresses that have a positive balance.
+   * @returns Array of addresses with their balances
+   */
+  private getAllAddressesWithBalance(): Array<{
+    address: string;
+    balance: number;
+  }> {
+    const addressBalances = new Map<string, number>();
+
+    // Get all UTXOs and group by address
+    const allUTXOs = this.utxoSet.getUTXOsForAddress(""); // This gets all UTXOs in our simple implementation
+
+    // We need to iterate through all blocks to find all addresses
+    for (const block of this.blocks) {
+      for (const transaction of block.transactions) {
+        for (const output of transaction.outputs) {
+          const currentBalance = addressBalances.get(output.address) || 0;
+          addressBalances.set(output.address, currentBalance);
+        }
+      }
+    }
+
+    // Calculate actual balances
+    const result = [];
+    const addresses = Array.from(addressBalances.keys());
+    for (const address of addresses) {
+      const balance = this.getBalance(address);
+      if (balance > 0) {
+        result.push({ address, balance });
+      }
+    }
+
+    return result.sort((a, b) => b.balance - a.balance); // Sort by balance descending
+  }
+
+  /**
+   * Demonstrates multiple double-spend attack scenarios.
+   * @returns Array of demonstration results
+   */
+  public demonstrateMultipleDoubleSpendScenarios(): Array<{
+    scenario: string;
+    result: {
+      success: boolean;
+      originalTx?: Transaction | null;
+      conflictingTx?: Transaction | null;
+      validationResults?: {
+        original: ValidationResult;
+        conflicting: ValidationResult;
+      } | null;
+      tx1Valid?: boolean;
+      tx2Valid?: boolean;
+      conflictDetected?: boolean;
+      errors?: string[];
+    } & { scenario?: string };
+  }> {
+    console.log("🔬 Running comprehensive double-spend attack scenarios...");
+
+    const scenarios = [];
+
+    // Scenario 1: Basic same-UTXO double spend
+    console.log("\n📋 Scenario 1: Basic same-UTXO double spend");
+    scenarios.push({
+      scenario: "Basic same-UTXO double spend",
+      result: this.demonstrateDoubleSpendPrevention(),
+    });
+
+    // Scenario 2: Demonstrate transaction pool conflict detection
+    console.log("\n📋 Scenario 2: Transaction pool conflict detection");
+    const addresses = this.getAllAddressesWithBalance();
+    if (addresses.length > 0) {
+      const testAddress = addresses[0];
+      const tx1 = this.createTransaction(testAddress.address, "recipient1", 10);
+      const tx2 = this.createTransaction(testAddress.address, "recipient2", 20);
+
+      if (tx1 && tx2) {
+        // Make tx2 conflict with tx1 by using same inputs
+        const conflictingTx2 = new Transaction(tx1.inputs, tx2.outputs);
+
+        const validation1 = this.addTransaction(tx1);
+        const validation2 = this.addTransaction(conflictingTx2);
+
+        scenarios.push({
+          scenario: "Transaction pool conflict detection",
+          result: {
+            success: !validation2.isValid, // Success means conflict was detected (second tx was rejected)
+            tx1Valid: validation1.isValid,
+            tx2Valid: validation2.isValid,
+            conflictDetected: !validation2.isValid,
+            errors: validation2.errors,
+          },
+        });
+      }
+    }
+
+    // Print summary
+    console.log("\n📊 Double-Spend Prevention Summary:");
+    scenarios.forEach((scenario, index) => {
+      console.log(
+        `   ${index + 1}. ${scenario.scenario}: ${scenario.result.success !== false ? "✅ PREVENTED" : "❌ FAILED"}`
+      );
+    });
+
+    return scenarios;
   }
 
   /**
