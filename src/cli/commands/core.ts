@@ -64,9 +64,8 @@ export function createMineCommand(): Command {
 /**
  * Transfer command - Create and submit a transaction
  */
-// todo: change to createTransactionCommand ?
-export function createTransferCommand(): Command {
-  return new Command("transfer")
+export function createTransactionCommand(): Command {
+  return new Command("tx")
     .description("Create and submit a transaction")
     .requiredOption("-f, --from <address>", "Sender address")
     .requiredOption("-t, --to <address>", "Recipient address")

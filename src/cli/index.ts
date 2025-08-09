@@ -11,7 +11,7 @@ import { showBanner, closeBlockchain } from "./utils";
 import {
   createInitCommand,
   createMineCommand,
-  createTransferCommand,
+  createTransactionCommand,
   createBalanceCommand,
 } from "./commands/core";
 
@@ -57,7 +57,7 @@ export function createProgram(): Command {
   // Core blockchain commands
   program.addCommand(createInitCommand());
   program.addCommand(createMineCommand());
-  program.addCommand(createTransferCommand());
+  program.addCommand(createTransactionCommand());
   program.addCommand(createBalanceCommand());
 
   // Display commands

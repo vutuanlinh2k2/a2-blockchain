@@ -82,7 +82,7 @@ export function createDisplayMempoolCommand(): Command {
                 const utxo = utxoSet.getUTXO(input.txId, input.outputIndex);
                 if (utxo) {
                   console.log(
-                    `      [${i}] address=${chalk.bold(utxo.address)}, amount: ${chalk.bold(utxo.amount.toString())}`
+                    `      [${i}] address=${chalk.bold(utxo.address)}, amount=${chalk.bold(utxo.amount.toString())}`
                   );
                 } else {
                   // Fallback if UTXO not found (should not happen in a valid mempool)
@@ -97,7 +97,7 @@ export function createDisplayMempoolCommand(): Command {
             console.log(`    Outputs (${tx.outputs.length}):`);
             tx.outputs.forEach((output, i) => {
               console.log(
-                `      [${i}] address=${chalk.bold(output.address)}, amount: ${chalk.bold(output.amount.toString())}`
+                `      [${i}] address=${chalk.bold(output.address)}, amount=${chalk.bold(output.amount.toString())}`
               );
             });
           });
