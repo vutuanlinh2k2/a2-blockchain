@@ -1,6 +1,6 @@
-import { Block } from "../Block";
-import { Transaction } from "../Transaction";
-import { Hash } from "../../crypto/Hash";
+import { Block } from "./Block";
+import { Transaction } from "./Transaction";
+import { Hash } from "../crypto/Hash";
 
 /**
  * Mining statistics for tracking performance and progress.

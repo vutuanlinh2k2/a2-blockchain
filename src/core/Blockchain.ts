@@ -1,6 +1,6 @@
 import { Block } from "./Block";
 import { Transaction, TransactionPool, UTXOSet, UTXO } from "./Transaction";
-import { ProofOfWork } from "./consensus/ProofOfWork";
+import { ProofOfWork } from "./ProofOfWork";
 import { BlockchainDB } from "../storage/Database";
 import { BlockchainStorage } from "../storage/BlockchainStorage";
 import {
@@ -432,19 +432,11 @@ export class Blockchain {
   }
 
   /**
-   * Gets a block by its index.
-   * @param index - The block index
-   * @returns The block if found, undefined otherwise
-   */
-  public getBlock(index: number): Block | undefined {
-    return this.blocks.find((block) => block.index === index);
-  }
-
-  /**
    * Gets a block by its hash.
    * @param hash - The block hash
    * @returns The block if found, undefined otherwise
    */
+  // TODO: no references for now
   public getBlockByHash(hash: string): Block | undefined {
     return this.blocks.find((block) => block.hash === hash);
   }
@@ -461,6 +453,7 @@ export class Blockchain {
    * Gets the length of the blockchain.
    * @returns The number of blocks in the chain
    */
+  // TODO: no references for now
   public getChainLength(): number {
     return this.blocks.length;
   }
@@ -718,22 +711,6 @@ export class Blockchain {
   }
 
   /**
-   * Gets double-spend prevention statistics.
-   * @returns Statistics about double-spend attempts and prevention
-   */
-  public getDoubleSpendStats(): {
-    validationStats: any;
-    doubleSpendAttempts: DoubleSpendAttempt[];
-    utxoSetSize: number;
-  } {
-    return {
-      validationStats: this.transactionValidator.getValidationStats(),
-      doubleSpendAttempts: this.transactionValidator.getDoubleSpendAttempts(),
-      utxoSetSize: this.utxoSet.size(),
-    };
-  }
-
-  /**
    * Creates a transaction for testing purposes.
    * @param fromAddress - Address sending funds (must have UTXOs)
    * @param toAddress - Address receiving funds
@@ -931,9 +908,6 @@ export class Blockchain {
     balance: number;
   }> {
     const addressBalances = new Map<string, number>();
-
-    // Get all UTXOs and group by address
-    const allUTXOs = this.utxoSet.getUTXOsForAddress(""); // This gets all UTXOs in our simple implementation
 
     // We need to iterate through all blocks to find all addresses
     for (const block of this.blocks) {
@@ -1282,30 +1256,6 @@ export class Blockchain {
       return true;
     } catch (error) {
       console.error("❌ Persistence integrity validation failed:", error);
-      return false;
-    }
-  }
-
-  /**
-   * Forces a complete sync between memory and database.
-   * Rebuilds memory state from database.
-   */
-  public syncFromDatabase(): boolean {
-    try {
-      console.log("🔄 Syncing blockchain from database...");
-
-      // Clear memory state
-      this.blocks = [];
-      this.utxoSet.clear();
-      this.transactionPool.clear();
-
-      // Reload from database
-      this.initializeChain();
-
-      console.log("✅ Database sync completed successfully");
-      return true;
-    } catch (error) {
-      console.error("❌ Database sync failed:", error);
       return false;
     }
   }
