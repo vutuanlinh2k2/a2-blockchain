@@ -25,14 +25,14 @@ export function createClearBlockchainDataCommand(): Command {
         const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
         const storage = bc.getStorage();
 
-        console.log(chalk.blue("🧹 Clearing database..."));
+        console.log(chalk.red("\n🧹 Clearing database..."));
 
         storage.clearAllData();
 
         // Reset global instance to reflect cleared state
         resetBlockchain();
 
-        console.log(chalk.green("✅ Database cleared successfully!"));
+        console.log(chalk.green("\n✅ Database cleared successfully!"));
       } catch (error) {
         handleError("Clear database", error);
       }
