@@ -22,12 +22,8 @@ import {
 } from "./commands/display";
 
 import {
-  createValidateCommand,
-  createExportCommand,
-  createImportCommand,
-  createClearDbCommand,
-  createSeedDbCommand,
-  createResetDbCommand,
+  createClearBlockchainDataCommand,
+  createSeedBlockchainDataCommand,
 } from "./commands/maintenance";
 
 import {
@@ -70,15 +66,9 @@ export function createProgram(): Command {
   program.addCommand(createStatsCommand());
   program.addCommand(createMempoolCommand());
 
-  // Maintenance commands
-  program.addCommand(createValidateCommand());
-  program.addCommand(createExportCommand());
-  program.addCommand(createImportCommand());
-
   // Database management commands
-  program.addCommand(createClearDbCommand());
-  program.addCommand(createSeedDbCommand());
-  program.addCommand(createResetDbCommand());
+  program.addCommand(createClearBlockchainDataCommand());
+  program.addCommand(createSeedBlockchainDataCommand());
 
   // Demo commands - All Required Features (1-8)
   program.addCommand(createDemoBlockStructureCommand()); // Feature 1: Block Structure

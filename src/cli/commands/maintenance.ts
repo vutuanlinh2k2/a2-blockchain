@@ -11,109 +11,12 @@ import {
   initBlockchain,
   DEFAULT_CORE_DB_PATH,
 } from "../utils";
-import { FileOptions } from "../types";
-
-/**
- * Validate command - Validate blockchain integrity
- */
-export function createValidateCommand(): Command {
-  return new Command("validate")
-    .description("Validate blockchain integrity")
-    .action(() => {
-      try {
-        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
-
-        console.log(chalk.blue("🔍 Validating blockchain integrity..."));
-
-        const chainValid = bc.validateChain();
-        const persistenceValid = bc.validatePersistenceIntegrity();
-
-        if (chainValid && persistenceValid) {
-          console.log(chalk.green("✅ Blockchain validation successful!"));
-          console.log("   ✓ Chain structure is valid");
-          console.log("   ✓ Persistence integrity verified");
-        } else {
-          console.log(chalk.red("❌ Blockchain validation failed!"));
-          if (!chainValid) console.log("   ✗ Chain structure is invalid");
-          if (!persistenceValid)
-            console.log("   ✗ Persistence integrity compromised");
-        }
-      } catch (error) {
-        handleError("Validation", error);
-      }
-    });
-}
-
-/**
- * Export command - Export blockchain to file
- */
-export function createExportCommand(): Command {
-  return new Command("export")
-    .description("Export blockchain to file")
-    .requiredOption("-f, --file <path>", "Export file path")
-    .action((options: FileOptions) => {
-      try {
-        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
-
-        console.log(
-          chalk.blue(`📤 Exporting blockchain to ${options.file}...`)
-        );
-
-        const success = bc.exportToFile(options.file);
-        if (success) {
-          console.log(chalk.green("✅ Export completed successfully!"));
-        } else {
-          console.log(chalk.red("❌ Export failed"));
-        }
-      } catch (error) {
-        handleError("Export", error);
-      }
-    });
-}
-
-/**
- * Import command - Import blockchain from file
- */
-export function createImportCommand(): Command {
-  return new Command("import")
-    .description("Import blockchain from file")
-    .requiredOption("-f, --file <path>", "Import file path")
-    .action((options: FileOptions) => {
-      try {
-        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
-
-        console.log(
-          chalk.yellow("⚠️  WARNING: This will replace the current blockchain!")
-        );
-        console.log(
-          chalk.blue(`📥 Importing blockchain from ${options.file}...`)
-        );
-
-        const success = bc.importFromFile(options.file);
-        if (success) {
-          console.log(chalk.green("✅ Import completed successfully!"));
-
-          // Reset global instance to reflect imported state
-          resetBlockchain();
-          const newBc = getBlockchain(options.database);
-          const stats = newBc.getStats();
-          console.log(
-            `📊 Imported ${stats.totalBlocks} blocks with ${stats.totalTransactions} transactions`
-          );
-        } else {
-          console.log(chalk.red("❌ Import failed"));
-        }
-      } catch (error) {
-        handleError("Import", error);
-      }
-    });
-}
 
 /**
  * Clear database command - Clear all blockchain data
  */
-export function createClearDbCommand(): Command {
-  return new Command("clear-db")
+export function createClearBlockchainDataCommand(): Command {
+  return new Command("clear-blockchain")
     .description("Clear all blockchain data from database")
     .action(() => {
       try {
@@ -143,13 +46,16 @@ export function createClearDbCommand(): Command {
 /**
  * Seed database command - Initialize database with genesis block (if empty)
  */
-export function createSeedDbCommand(): Command {
-  return new Command("seed-db")
-    .description("Seed database with genesis block (only if database is empty)")
-    .action(() => {
+// TODO: seed data with more data, move this inside a script
+export function createSeedBlockchainDataCommand(): Command {
+  return new Command("seed-blockchain")
+    .description(
+      "Seed database with a 5-block sample chain (only if database is empty)"
+    )
+    .action(async () => {
       try {
         // Check if database is empty first, before initializing blockchain
-        // This prevents automatic genesis block creation
+        // This prevents automatic genesis block creation when not desired
         const { BlockchainDB } = require("../../storage/Database");
         const {
           BlockchainStorage,
@@ -171,55 +77,69 @@ export function createSeedDbCommand(): Command {
 
         tempDb.close();
 
-        console.log(chalk.blue("🌱 Seeding database with genesis block..."));
+        console.log(
+          chalk.blue("🌱 Seeding database with a realistic 5-block chain...")
+        );
 
-        // Now create the blockchain (which will create genesis block)
-        const newBc = initBlockchain(DEFAULT_CORE_DB_PATH);
-        const stats = newBc.getStats();
+        // Initialize blockchain (creates genesis block at index 0)
+        const bc = initBlockchain(DEFAULT_CORE_DB_PATH);
 
+        // Addresses used in seed data
+        const miner1 = "miner1";
+        const alice = "alice";
+        const bob = "bob";
+        const carol = "carol";
+
+        // Helper to safely add a tx to mempool
+        const addTx = (
+          label: string,
+          from: string,
+          to: string,
+          amount: number
+        ) => {
+          const tx = bc.createTransaction(from, to, amount);
+          if (!tx) {
+            console.log(
+              chalk.yellow(`   ℹ️  Skipped ${label}: insufficient funds`)
+            );
+            return false;
+          }
+          const validation = bc.addTransaction(tx);
+          if (!validation.isValid) {
+            console.log(
+              chalk.yellow(
+                `   ℹ️  Skipped ${label}: ${validation.errors.join(", ")}`
+              )
+            );
+            return false;
+          }
+          return true;
+        };
+
+        // Mine Block #1: award miner1
+        await bc.mineBlock(miner1);
+
+        // Prepare and mine Block #2: distribute to alice
+        addTx("miner1 → alice (20)", miner1, alice, 20);
+        await bc.mineBlock(miner1);
+
+        // Prepare and mine Block #3: alice → bob, and further distribute from miner1 → carol
+        addTx("alice → bob (5)", alice, bob, 5);
+        addTx("miner1 → carol (12)", miner1, carol, 12);
+        await bc.mineBlock(miner1);
+
+        // Prepare and mine Block #4: small movements among users
+        addTx("bob → alice (3)", bob, alice, 3);
+        addTx("carol → alice (4)", carol, alice, 4);
+        await bc.mineBlock(miner1);
+
+        const stats = bc.getStats();
         console.log(chalk.green("✅ Database seeded successfully!"));
         console.log(
           `📊 Created ${stats.totalBlocks} blocks with ${stats.totalTransactions} transactions`
         );
       } catch (error) {
         handleError("Seed database", error);
-      }
-    });
-}
-
-/**
- * Reset database command - Clear and seed database
- */
-export function createResetDbCommand(): Command {
-  return new Command("reset-db")
-    .description("Clear database and seed with genesis block")
-    .action(() => {
-      try {
-        console.log(
-          chalk.yellow(
-            "⚠️  WARNING: This will permanently delete all blockchain data!"
-          )
-        );
-
-        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
-        const storage = bc.getStorage();
-
-        console.log(chalk.blue("🧹 Clearing database..."));
-        storage.clearAllData();
-
-        console.log(chalk.blue("🌱 Seeding database with genesis block..."));
-
-        // Reset and reinitialize to create genesis block
-        resetBlockchain();
-        const newBc = initBlockchain(DEFAULT_CORE_DB_PATH);
-        const stats = newBc.getStats();
-
-        console.log(chalk.green("✅ Database reset and seeded successfully!"));
-        console.log(
-          `📊 Created ${stats.totalBlocks} blocks with ${stats.totalTransactions} transactions`
-        );
-      } catch (error) {
-        handleError("Reset database", error);
       }
     });
 }
