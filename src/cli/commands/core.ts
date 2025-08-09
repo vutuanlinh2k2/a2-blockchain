@@ -125,14 +125,15 @@ export function createBalanceCommand(): Command {
         const utxos = bc.getUTXOs(options.address);
 
         console.log(chalk.magenta(`💰 Balance for ${options.address}:`));
-        console.log(`   Total: ${balance}`);
-        console.log(`   UTXOs: ${utxos.length}`);
+        console.log(
+          `   Total: ${balance} ${chalk.gray("(confirmed UTXOs only; pending mempool transactions are excluded until mined)")}`
+        );
 
         if (utxos.length > 0) {
-          console.log("📋 UTXO Details:");
+          console.log(`📋 UTXOs (${utxos.length}):`);
           utxos.forEach((utxo, index) => {
             console.log(
-              `   ${index + 1}. ${utxo.txId}:${utxo.outputIndex} = ${utxo.amount}`
+              `   [${index + 1}] id=${utxo.txId}, outputIndex=${utxo.outputIndex}, amount=${utxo.amount}`
             );
           });
         }

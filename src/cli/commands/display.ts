@@ -82,12 +82,22 @@ export function createDisplayMempoolCommand(): Command {
                 const utxo = utxoSet.getUTXO(input.txId, input.outputIndex);
                 if (utxo) {
                   console.log(
-                    `      [${i}] address=${chalk.bold(utxo.address)}, amount=${chalk.bold(utxo.amount.toString())}`
+                    `      [${i}] txId=${chalk.bold(
+                      `${input.txId.substring(0, 10)}...`
+                    )}, outputIndex=${chalk.bold(
+                      input.outputIndex
+                    )}, address=${chalk.bold(
+                      utxo.address
+                    )}, amount=${chalk.bold(utxo.amount.toString())}`
                   );
                 } else {
                   // Fallback if UTXO not found (should not happen in a valid mempool)
                   console.log(
-                    `      [${i}] address=${chalk.dim(input.txId.substring(0, 15))}..., outputIndex=${input.outputIndex} (UTXO not found)`
+                    `      [${i}] txId=${chalk.bold(
+                      `${input.txId.substring(0, 10)}...`
+                    )}, outputIndex=${chalk.bold(
+                      input.outputIndex
+                    )} ${chalk.red("(UTXO not found)")}`
                   );
                 }
               });
@@ -97,7 +107,9 @@ export function createDisplayMempoolCommand(): Command {
             console.log(`    Outputs (${tx.outputs.length}):`);
             tx.outputs.forEach((output, i) => {
               console.log(
-                `      [${i}] address=${chalk.bold(output.address)}, amount=${chalk.bold(output.amount.toString())}`
+                `      [${i}] to=${chalk.bold(
+                  output.address
+                )}, amount=${chalk.bold(output.amount.toString())}`
               );
             });
           });

@@ -851,12 +851,17 @@ export class Blockchain {
     console.log(`   Inputs (${inputs.length}):`);
     inputUTXOs.forEach((utxo, idx) => {
       console.log(
-        `     [${idx}] address=${utxo.address}, amount=${utxo.amount}`
+        `     [${idx}] txId=${utxo.txId.substring(0, 10)}..., outputIndex=${
+          utxo.outputIndex
+        }, address=${utxo.address}, amount=${utxo.amount}`
       );
     });
     console.log(`   Outputs (${outputs.length}):`);
     outputs.forEach((out, idx) => {
-      console.log(`     [${idx}] address=${out.address}, amount=${out.amount}`);
+      const type = out.address === fromAddress ? "change" : "payment";
+      console.log(
+        `     [${idx}] to=${out.address}, amount=${out.amount} (${type})`
+      );
     });
 
     return transaction;
