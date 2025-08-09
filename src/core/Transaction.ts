@@ -276,7 +276,7 @@ export class TransactionPool {
  * This is the core of the double-spend prevention system.
  */
 export class UTXOSet {
-  private utxos: Map<string, UTXO> = new Map();
+  public utxos: Map<string, UTXO> = new Map();
 
   /**
    * Adds a new UTXO to the set.
@@ -312,6 +312,17 @@ export class UTXOSet {
     utxo.markAsSpent(spentInTx);
     this.utxos.delete(utxoId); // Remove from unspent set
     return true;
+  }
+
+  /**
+   * Gets a specific UTXO by its transaction ID and output index.
+   * @param txId - The transaction ID
+   * @param outputIndex - The output index
+   * @returns The UTXO if found, undefined otherwise
+   */
+  public getUTXO(txId: string, outputIndex: number): UTXO | undefined {
+    const utxoId = `${txId}:${outputIndex}`;
+    return this.utxos.get(utxoId);
   }
 
   /**

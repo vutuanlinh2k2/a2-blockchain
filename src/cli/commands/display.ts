@@ -4,6 +4,7 @@
 
 import { Command } from "commander";
 import chalk from "chalk";
+import { format } from "date-fns";
 import { getBlockchain, handleError, DEFAULT_CORE_DB_PATH } from "../utils";
 import { ChainOptions } from "../types";
 
@@ -55,6 +56,7 @@ export function createDisplayMempoolCommand(): Command {
         const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
         const pool = bc.getTransactionPool();
         const transactions = pool.getAllTransactions();
+        const utxoSet = bc.getUTXOSet();
 
         console.log(
           chalk.cyan(`📋 Transaction Pool (${transactions.length} pending):`)
@@ -64,13 +66,40 @@ export function createDisplayMempoolCommand(): Command {
           console.log("   No pending transactions");
         } else {
           transactions.forEach((tx, index) => {
-            console.log(`\n   ${index + 1}. ${tx.id}`);
-            console.log(`      Inputs: ${tx.inputs.length}`);
-            console.log(`      Outputs: ${tx.outputs.length}`);
-            console.log(`      Amount: ${tx.getTotalOutputAmount()}`);
             console.log(
-              `      Timestamp: ${new Date(tx.timestamp).toISOString()}`
+              chalk.yellow(`\n[${index + 1}] Transaction ID: ${tx.id}`)
             );
+            console.log(
+              `    Received: ${format(new Date(tx.timestamp), "dd-MM-yyyy (HH:mm:ss)")}`
+            );
+
+            // Inputs
+            console.log(`    Inputs (${tx.inputs.length}):`);
+            if (tx.inputs.length === 0) {
+              console.log(chalk.gray("     (Coinbase transaction)"));
+            } else {
+              tx.inputs.forEach((input, i) => {
+                const utxo = utxoSet.getUTXO(input.txId, input.outputIndex);
+                if (utxo) {
+                  console.log(
+                    `      [${i}] address=${chalk.bold(utxo.address)}, amount: ${chalk.bold(utxo.amount.toString())}`
+                  );
+                } else {
+                  // Fallback if UTXO not found (should not happen in a valid mempool)
+                  console.log(
+                    `      [${i}] address=${chalk.dim(input.txId.substring(0, 15))}..., outputIndex=${input.outputIndex} (UTXO not found)`
+                  );
+                }
+              });
+            }
+
+            // Outputs
+            console.log(`    Outputs (${tx.outputs.length}):`);
+            tx.outputs.forEach((output, i) => {
+              console.log(
+                `      [${i}] address=${chalk.bold(output.address)}, amount: ${chalk.bold(output.amount.toString())}`
+              );
+            });
           });
         }
       } catch (error) {

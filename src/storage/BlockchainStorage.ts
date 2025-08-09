@@ -21,6 +21,9 @@ export class BlockchainStorage {
   private saveUTXOStmt!: Database.Statement;
   private updateUTXOStmt!: Database.Statement;
   private saveChainStateStmt!: Database.Statement;
+  private saveMempoolTxStmt!: Database.Statement;
+  private deleteMempoolTxStmt!: Database.Statement;
+  private getAllMempoolTxStmt!: Database.Statement;
   private getBlocksStmt!: Database.Statement;
   private getTransactionsStmt!: Database.Statement;
   private getUTXOsStmt!: Database.Statement;
@@ -81,6 +84,18 @@ export class BlockchainStorage {
     this.deleteUTXOStmt = this.db.prepare(`
       DELETE FROM transaction_outputs 
       WHERE transaction_id = ? AND output_index = ?
+    `);
+
+    // Mempool persistence statements
+    this.saveMempoolTxStmt = this.db.prepare(`
+      INSERT OR REPLACE INTO mempool_transactions (id, timestamp, serialized)
+      VALUES (?, ?, ?)
+    `);
+    this.deleteMempoolTxStmt = this.db.prepare(`
+      DELETE FROM mempool_transactions WHERE id = ?
+    `);
+    this.getAllMempoolTxStmt = this.db.prepare(`
+      SELECT id, timestamp, serialized FROM mempool_transactions ORDER BY timestamp ASC
     `);
   }
 
@@ -337,6 +352,57 @@ export class BlockchainStorage {
   }
 
   /**
+   * Persist a transaction in the mempool storage.
+   */
+  public saveMempoolTransaction(
+    id: string,
+    timestamp: number,
+    serialized: string
+  ): boolean {
+    try {
+      this.saveMempoolTxStmt.run(id, timestamp, serialized);
+      return true;
+    } catch (error) {
+      console.error(`❌ Failed to save mempool transaction ${id}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Remove a transaction from the mempool storage by id.
+   */
+  public deleteMempoolTransaction(id: string): boolean {
+    try {
+      this.deleteMempoolTxStmt.run(id);
+      return true;
+    } catch (error) {
+      console.error(`❌ Failed to delete mempool transaction ${id}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Load all mempool transactions from storage.
+   */
+  public loadMempoolTransactions(): {
+    id: string;
+    timestamp: number;
+    serialized: string;
+  }[] {
+    try {
+      const rows = this.getAllMempoolTxStmt.all() as any[];
+      return rows.map((r) => ({
+        id: r.id,
+        timestamp: r.timestamp,
+        serialized: r.serialized,
+      }));
+    } catch (error) {
+      console.error("❌ Failed to load mempool transactions:", error);
+      return [];
+    }
+  }
+
+  /**
    * Loads chain state metadata.
    * @param key - The state key to retrieve
    * @returns The state value or null if not found
@@ -513,6 +579,7 @@ export class BlockchainStorage {
         this.db.exec(`DELETE FROM transactions`);
         this.db.exec(`DELETE FROM blocks`);
         this.db.exec(`DELETE FROM chain_state`);
+        this.db.exec(`DELETE FROM mempool_transactions`);
       });
 
       transaction();

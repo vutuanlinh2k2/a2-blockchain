@@ -77,6 +77,14 @@ export class BlockchainDB {
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
       );
+
+      -- The 'mempool_transactions' table persists pending transactions (mempool)
+      -- so they survive across CLI runs/process restarts.
+      CREATE TABLE IF NOT EXISTS mempool_transactions (
+        id TEXT PRIMARY KEY,
+        timestamp INTEGER NOT NULL,
+        serialized TEXT NOT NULL
+      );
     `);
   }
 

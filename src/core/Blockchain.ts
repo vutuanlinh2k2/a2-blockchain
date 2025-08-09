@@ -75,6 +75,9 @@ export class Blockchain {
 
     // Load existing blockchain from database or initialize with genesis block
     this.initializeChain();
+
+    // Restore persisted mempool (if any)
+    this.restoreMempoolFromStorage();
   }
 
   /**
@@ -115,6 +118,32 @@ export class Blockchain {
       console.log("📝 No existing blockchain found, creating genesis block");
       this.createGenesisBlock();
     }
+  }
+
+  /**
+   * Restores the in-memory mempool from persisted database entries.
+   */
+  private restoreMempoolFromStorage(): void {
+    try {
+      const rows = this.storage.loadMempoolTransactions();
+      if (!rows || rows.length === 0) return;
+
+      for (const row of rows) {
+        try {
+          const tx = Transaction.deserialize(row.serialized);
+          const validation = this.transactionValidator.validateTransaction(tx);
+          if (validation.isValid) {
+            this.transactionPool.addTransaction(tx);
+            this.transactionValidator.addToMempool(tx);
+          } else {
+            // Drop invalid/stale entry
+            this.storage.deleteMempoolTransaction(row.id);
+          }
+        } catch (e) {
+          this.storage.deleteMempoolTransaction(row.id);
+        }
+      }
+    } catch {}
   }
 
   /**
@@ -314,6 +343,8 @@ export class Blockchain {
     for (const transaction of block.transactions) {
       this.transactionPool.removeTransaction(transaction.id);
       this.transactionValidator.removeFromMempool(transaction.id);
+      // Also remove from persisted mempool store
+      this.storage.deleteMempoolTransaction(transaction.id);
     }
   }
 
@@ -430,6 +461,13 @@ export class Blockchain {
         // Add to validator's mempool for conflict detection
         this.transactionValidator.addToMempool(transaction);
         console.log(`✅ Transaction added to pool: ${transaction.id}`);
+
+        // Persist to mempool storage so it survives CLI process exits
+        this.storage.saveMempoolTransaction(
+          transaction.id,
+          transaction.timestamp,
+          transaction.serialize()
+        );
 
         // Log any warnings
         if (validationResult.warnings.length > 0) {
@@ -732,6 +770,14 @@ export class Blockchain {
    */
   public getTransactionPool(): TransactionPool {
     return this.transactionPool;
+  }
+
+  /**
+   * Gets the UTXO set.
+   * @returns The current UTXO set
+   */
+  public getUTXOSet(): UTXOSet {
+    return this.utxoSet;
   }
 
   /**

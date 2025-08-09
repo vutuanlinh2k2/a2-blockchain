@@ -53,6 +53,7 @@
     "better-sqlite3": "^12.2.0",
     "chalk": "^4.1.2",
     "commander": "^11.0.0",
+    "date-fns": "^4.1.0",
     "figlet": "^1.6.0"
   },
   "engines": {
