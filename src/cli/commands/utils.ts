@@ -12,7 +12,7 @@ import {
  * Clear database command - Clear all blockchain data
  */
 export function createClearBlockchainDataCommand(): Command {
-  return new Command("clear-blockchain")
+  return new Command("clear-chain")
     .description("Clear all blockchain data from database")
     .action(() => {
       try {
@@ -44,7 +44,7 @@ export function createClearBlockchainDataCommand(): Command {
  */
 // TODO: seed data with more data, move this inside a script
 export function createSeedBlockchainDataCommand(): Command {
-  return new Command("seed-blockchain")
+  return new Command("seed-chain")
     .description(
       "Seed database with a 5-block sample chain (only if database is empty)"
     )

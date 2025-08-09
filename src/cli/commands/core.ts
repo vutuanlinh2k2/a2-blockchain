@@ -82,7 +82,7 @@ export function createTransferCommand(): Command {
         }
 
         console.log(
-          chalk.yellow(
+          chalk.blue(
             `💸 Creating transaction: ${options.from} → ${options.to} (${amount})`
           )
         );
@@ -97,9 +97,8 @@ export function createTransferCommand(): Command {
           const result = bc.addTransaction(transaction);
           if (result.isValid) {
             console.log(
-              chalk.green("✅ Transaction created and added to pool")
+              chalk.green("✅ Transaction created and added to pool!")
             );
-            console.log(`🆔 Transaction ID: ${transaction.id}`);
           } else {
             console.log(chalk.red("❌ Transaction rejected:"));
             result.errors.forEach((error) => console.log(`   ${error}`));

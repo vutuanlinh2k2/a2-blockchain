@@ -119,15 +119,10 @@ export class Block {
       return false;
     }
 
-    // Check timestamp is reasonable (not in the future, not too old)
+    // Check timestamp is not in the future
     const now = Date.now();
-    const maxAge = 2 * 60 * 60 * 1000; // 2 hours
     if (this.timestamp > now) {
       console.log(`❌ Block ${this.index}: Timestamp is in the future`);
-      return false;
-    }
-    if (this.timestamp < now - maxAge) {
-      console.log(`❌ Block ${this.index}: Timestamp is too old`);
       return false;
     }
 

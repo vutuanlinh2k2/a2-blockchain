@@ -10,8 +10,8 @@ import { ChainOptions } from "../types";
 /**
  * Chain command - Display the blockchain
  */
-export function createChainCommand(): Command {
-  return new Command("chain")
+export function createDisplayChainCommand(): Command {
+  return new Command("display-chain")
     .description("Display the blockchain")
     .option("-l, --limit <number>", "Limit number of blocks to show", "10")
     .action((options: ChainOptions) => {
@@ -45,52 +45,10 @@ export function createChainCommand(): Command {
 }
 
 /**
- * Stats command - Show blockchain statistics
- */
-export function createStatsCommand(): Command {
-  return new Command("stats")
-    .description("Show blockchain statistics")
-    .action(() => {
-      try {
-        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
-        const stats = bc.getExtendedStats();
-
-        console.log(chalk.blue("📊 Blockchain Statistics:"));
-        console.log(`   Total Blocks: ${stats.totalBlocks}`);
-        console.log(`   Total Transactions: ${stats.totalTransactions}`);
-        console.log(`   Current Difficulty: ${stats.currentDifficulty}`);
-        console.log(
-          `   Average Block Time: ${stats.averageBlockTime.toFixed(2)}ms`
-        );
-        console.log(`   Total Value: ${stats.totalValue}`);
-        console.log(`   Latest Block: ${stats.latestBlockHash}`);
-
-        console.log(chalk.green("\n💾 Database Statistics:"));
-        console.log(`   Blocks in DB: ${stats.databaseStats.blockCount}`);
-        console.log(
-          `   Transactions in DB: ${stats.databaseStats.transactionCount}`
-        );
-        console.log(`   UTXOs: ${stats.databaseStats.utxoCount}`);
-        console.log(`   Spent UTXOs: ${stats.databaseStats.spentUtxoCount}`);
-        console.log(
-          `   Chain State Entries: ${stats.databaseStats.chainStateCount}`
-        );
-
-        console.log(chalk.yellow("\n🔗 Chain State:"));
-        console.log(`   Chain Tip: ${stats.chainState.tip}`);
-        console.log(`   Chain Length: ${stats.chainState.length}`);
-        console.log(`   Genesis Hash: ${stats.chainState.genesisHash}`);
-      } catch (error) {
-        handleError("Stats", error);
-      }
-    });
-}
-
-/**
  * Mempool command - Show pending transactions
  */
-export function createMempoolCommand(): Command {
-  return new Command("mempool")
+export function createDisplayMempoolCommand(): Command {
+  return new Command("display-mempool")
     .description("Show pending transactions")
     .action(() => {
       try {

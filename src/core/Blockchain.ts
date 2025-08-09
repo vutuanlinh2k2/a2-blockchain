@@ -746,11 +746,7 @@ export class Blockchain {
     toAddress: string,
     amount: number
   ): Transaction | null {
-    console.log(
-      chalk.blue(
-        `💸 Creating transaction: ${fromAddress} → ${toAddress} (${amount})`
-      )
-    );
+    // Note: CLI layer logs the user-facing "creating transaction" message.
 
     // Get UTXOs for the sender
     const senderUTXOs = this.utxoSet.getUTXOsForAddress(fromAddress);
@@ -806,10 +802,16 @@ export class Blockchain {
     const transaction = new Transaction(inputs, outputs);
 
     console.log(`✅ Transaction created: ${transaction.id}`);
-    console.log(`   Inputs: ${inputs.length}, Outputs: ${outputs.length}`);
-    console.log(
-      `   Total Input: ${selectedValue}, Total Output: ${amount + change}`
-    );
+    console.log(`   Inputs (${inputs.length}):`);
+    inputUTXOs.forEach((utxo, idx) => {
+      console.log(
+        `     [${idx}] address=${utxo.address}, amount=${utxo.amount}`
+      );
+    });
+    console.log(`   Outputs (${outputs.length}):`);
+    outputs.forEach((out, idx) => {
+      console.log(`     [${idx}] address=${out.address}, amount=${out.amount}`);
+    });
 
     return transaction;
   }

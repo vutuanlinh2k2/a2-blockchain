@@ -215,7 +215,6 @@ export class TransactionPool {
 
     // Add the transaction
     this.transactions.set(transaction.id, transaction);
-    console.log(`✅ Transaction added to pool: ${transaction.id}`);
     return true;
   }
 

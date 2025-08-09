@@ -16,9 +16,8 @@ import {
 } from "./commands/core";
 
 import {
-  createChainCommand,
-  createStatsCommand,
-  createMempoolCommand,
+  createDisplayChainCommand,
+  createDisplayMempoolCommand,
 } from "./commands/display";
 
 import {
@@ -62,9 +61,8 @@ export function createProgram(): Command {
   program.addCommand(createBalanceCommand());
 
   // Display commands
-  program.addCommand(createChainCommand());
-  program.addCommand(createStatsCommand());
-  program.addCommand(createMempoolCommand());
+  program.addCommand(createDisplayChainCommand());
+  program.addCommand(createDisplayMempoolCommand());
 
   // Utilities commands
   program.addCommand(createClearBlockchainDataCommand());
