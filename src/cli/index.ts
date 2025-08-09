@@ -24,7 +24,7 @@ import {
 import {
   createClearBlockchainDataCommand,
   createSeedBlockchainDataCommand,
-} from "./commands/maintenance";
+} from "./commands/utils";
 
 import {
   createDemoDoubleSpendCommand,
@@ -66,7 +66,7 @@ export function createProgram(): Command {
   program.addCommand(createStatsCommand());
   program.addCommand(createMempoolCommand());
 
-  // Database management commands
+  // Utilities commands
   program.addCommand(createClearBlockchainDataCommand());
   program.addCommand(createSeedBlockchainDataCommand());
 

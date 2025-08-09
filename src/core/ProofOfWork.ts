@@ -65,7 +65,7 @@ export class ProofOfWork {
       success: false,
     };
 
-    console.log(`🎯 Target: ${stats.targetHash.substring(0, 20)}...\n`);
+    console.log(`🎯 Target: ${stats.targetHash.substring(0, 20)}...`);
 
     let currentBlock = block;
     let lastProgressUpdate = Date.now();
@@ -92,7 +92,7 @@ export class ProofOfWork {
         console.log(
           `   Time: ${((stats.endTime - stats.startTime) / 1000).toFixed(2)}s`
         );
-        console.log(`   Hash Rate: ${Hash.formatHashRate(stats.hashRate)}\n`);
+        console.log(`   Hash Rate: ${Hash.formatHashRate(stats.hashRate)}`);
 
         return currentBlock;
       }

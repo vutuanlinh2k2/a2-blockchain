@@ -138,7 +138,7 @@ export class BlockchainStorage {
       });
 
       transaction();
-      console.log(`💾 Block ${block.index} saved to database`);
+      console.log(`💾 Block ${block.index} saved`);
       return true;
     } catch (error) {
       console.error(`❌ Failed to save block ${block.index}:`, error);

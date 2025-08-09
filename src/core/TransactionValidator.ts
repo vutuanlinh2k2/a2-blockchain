@@ -237,6 +237,7 @@ export class TransactionValidator {
    * @param transaction - The transaction to check
    * @returns Validation result with warnings
    */
+  // TODO: check back the logic of this
   private checkTransactionFees(transaction: Transaction): ValidationResult {
     const result: ValidationResult = {
       isValid: true,

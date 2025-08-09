@@ -1,7 +1,3 @@
-/**
- * Maintenance commands (validate, export, import)
- */
-
 import { Command } from "commander";
 import chalk from "chalk";
 import {
@@ -69,7 +65,7 @@ export function createSeedBlockchainDataCommand(): Command {
             chalk.yellow("⚠️  Database is not empty. Seeding skipped.")
           );
           console.log(
-            "Use 'reset-db' to clear and seed, or 'clear-db' to clear only."
+            "Use 'clear-blockchain' to clear the database, then rerun 'seed-blockchain'."
           );
           tempDb.close();
           return;
@@ -77,9 +73,7 @@ export function createSeedBlockchainDataCommand(): Command {
 
         tempDb.close();
 
-        console.log(
-          chalk.blue("🌱 Seeding database with a realistic 5-block chain...")
-        );
+        console.log(chalk.blue("🌱 Seeding blockchain data..."));
 
         // Initialize blockchain (creates genesis block at index 0)
         const bc = initBlockchain(DEFAULT_CORE_DB_PATH);
@@ -118,26 +112,29 @@ export function createSeedBlockchainDataCommand(): Command {
 
         // Mine Block #1: award miner1
         await bc.mineBlock(miner1);
+        console.log();
 
         // Prepare and mine Block #2: distribute to alice
         addTx("miner1 → alice (20)", miner1, alice, 20);
         await bc.mineBlock(miner1);
+        console.log();
 
         // Prepare and mine Block #3: alice → bob, and further distribute from miner1 → carol
         addTx("alice → bob (5)", alice, bob, 5);
+        console.log();
         addTx("miner1 → carol (12)", miner1, carol, 12);
         await bc.mineBlock(miner1);
+        console.log();
 
         // Prepare and mine Block #4: small movements among users
         addTx("bob → alice (3)", bob, alice, 3);
+        console.log();
         addTx("carol → alice (4)", carol, alice, 4);
         await bc.mineBlock(miner1);
+        console.log();
 
-        const stats = bc.getStats();
         console.log(chalk.green("✅ Database seeded successfully!"));
-        console.log(
-          `📊 Created ${stats.totalBlocks} blocks with ${stats.totalTransactions} transactions`
-        );
+        console.log();
       } catch (error) {
         handleError("Seed database", error);
       }

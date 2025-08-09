@@ -275,8 +275,6 @@ export class Block {
 
     // Create the genesis block with easy difficulty
     const genesisBlock = new Block(0, transactions, previousHash, 0, 1);
-
-    console.log(`🎉 Genesis block created: ${genesisBlock.hash}`);
     return genesisBlock;
   }
 

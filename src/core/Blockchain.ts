@@ -1,13 +1,10 @@
+import chalk from "chalk";
 import { Block } from "./Block";
 import { Transaction, TransactionPool, UTXOSet, UTXO } from "./Transaction";
 import { ProofOfWork } from "./ProofOfWork";
 import { BlockchainDB } from "../storage/Database";
 import { BlockchainStorage } from "../storage/BlockchainStorage";
-import {
-  TransactionValidator,
-  ValidationResult,
-  DoubleSpendAttempt,
-} from "./TransactionValidator";
+import { TransactionValidator, ValidationResult } from "./TransactionValidator";
 
 /**
  * Statistics about the current state of the blockchain.
@@ -326,7 +323,6 @@ export class Blockchain {
    * @returns The mined block, or null if mining failed
    */
   public async mineBlock(minerAddress: string): Promise<Block | null> {
-
     // Create coinbase transaction (mining reward)
     const coinbaseTransaction = Transaction.createCoinbase(
       minerAddress,
@@ -352,8 +348,39 @@ export class Blockchain {
     );
 
     console.log(
-      `📦 Mining block #${candidateBlock.index} with ${blockTransactions.length} transactions`
+      chalk.blue(
+        `\n📦 Mining block #${candidateBlock.index} with ${blockTransactions.length} transactions`
+      )
     );
+
+    // Log a concise, one-line summary for each transaction included in the block
+    for (let i = 0; i < blockTransactions.length; i++) {
+      const tx = blockTransactions[i];
+      const isCoinbase = tx.inputs.length === 0;
+      const totalAmount = tx.getTotalOutputAmount();
+
+      // Derive sender addresses from referenced UTXOs (if not coinbase)
+      let fromAddresses = "coinbase";
+      if (!isCoinbase) {
+        const allUTXOs = this.utxoSet.getAllUTXOs();
+        const froms = tx.inputs.map((input) => {
+          const utxo = allUTXOs.find(
+            (u) => u.txId === input.txId && u.outputIndex === input.outputIndex
+          );
+          return utxo ? utxo.address : "unknown";
+        });
+        const uniqueFroms = Array.from(new Set(froms));
+        fromAddresses = uniqueFroms.join("+") || "unknown";
+      }
+
+      // Recipient addresses and amounts
+      const toField = tx.outputs.map((o) => `${o.address}`);
+
+      const txType = isCoinbase ? "coinbase" : "payment";
+      console.log(
+        `   tx#${i}, from=${fromAddresses}, to=${toField}, amount=${totalAmount}, type=${txType}`
+      );
+    }
 
     // Mine the block
     const progressReporter = this.proofOfWork.createProgressReporter();
@@ -720,7 +747,9 @@ export class Blockchain {
     amount: number
   ): Transaction | null {
     console.log(
-      `💸 Creating transaction: ${fromAddress} → ${toAddress} (${amount})`
+      chalk.blue(
+        `💸 Creating transaction: ${fromAddress} → ${toAddress} (${amount})`
+      )
     );
 
     // Get UTXOs for the sender
