@@ -52,12 +52,7 @@ export function createMineCommand(): Command {
         );
 
         const minedBlock = await bc.mineBlock(options.address!);
-        if (minedBlock) {
-          console.log(chalk.green("✅ Block mined successfully!"));
-          console.log(`📦 Block #${minedBlock.index}`);
-          console.log(`🔗 Hash: ${minedBlock.hash}`);
-          console.log(`💰 Reward: ${bc.getBalance(options.address!)}`);
-        } else {
+        if (!minedBlock) {
           console.log(chalk.red("❌ Mining failed"));
         }
       } catch (error) {

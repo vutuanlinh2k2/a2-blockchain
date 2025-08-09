@@ -65,10 +65,7 @@ export class ProofOfWork {
       success: false,
     };
 
-    console.log(
-      `⛏️  Starting to mine block #${block.index} (difficulty: ${block.difficulty})`
-    );
-    console.log(`🎯 Target: ${stats.targetHash.substring(0, 20)}...`);
+    console.log(`🎯 Target: ${stats.targetHash.substring(0, 20)}...\n`);
 
     let currentBlock = block;
     let lastProgressUpdate = Date.now();
@@ -88,11 +85,14 @@ export class ProofOfWork {
         console.log(`🎉 Block mined successfully!`);
         console.log(`   Nonce: ${currentBlock.nonce}`);
         console.log(`   Hash: ${currentBlock.hash}`);
+        console.log(
+          `   Reward: ${currentBlock.transactions[0].outputs[0].amount}`
+        );
         console.log(`   Attempts: ${stats.attempts.toLocaleString()}`);
         console.log(
           `   Time: ${((stats.endTime - stats.startTime) / 1000).toFixed(2)}s`
         );
-        console.log(`   Hash Rate: ${Hash.formatHashRate(stats.hashRate)}`);
+        console.log(`   Hash Rate: ${Hash.formatHashRate(stats.hashRate)}\n`);
 
         return currentBlock;
       }

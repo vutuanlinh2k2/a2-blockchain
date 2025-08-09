@@ -105,7 +105,7 @@ export class Blockchain {
         this.utxoSet.clear();
         this.createGenesisBlock();
       } else {
-        console.log("✅ Loaded blockchain validated successfully");
+        console.log("✅ Loaded blockchain validated successfully\n");
 
         // Save chain tip to state
         this.storage.saveChainState("chain_tip", this.getLatestBlock().hash);
@@ -215,8 +215,6 @@ export class Blockchain {
     this.storage.saveChainState("chain_length", this.blocks.length.toString());
 
     console.log(`✅ Block ${block.index} added to chain and saved to database`);
-    console.log(`   Hash: ${block.hash}`);
-    console.log(`   Transactions: ${block.getTransactionCount()}`);
 
     return true;
   }
@@ -328,7 +326,6 @@ export class Blockchain {
    * @returns The mined block, or null if mining failed
    */
   public async mineBlock(minerAddress: string): Promise<Block | null> {
-    console.log("⛏️  Starting block mining...");
 
     // Create coinbase transaction (mining reward)
     const coinbaseTransaction = Transaction.createCoinbase(

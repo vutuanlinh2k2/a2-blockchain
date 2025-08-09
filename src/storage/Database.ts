@@ -94,7 +94,7 @@ export class BlockchainDB {
   public close(): void {
     if (this.db) {
       this.db.close();
-      console.log("Database connection closed.");
+      console.log("\nDatabase connection closed.");
     }
   }
 }
