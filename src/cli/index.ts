@@ -54,6 +54,8 @@ export function createProgram(): Command {
       "beforeAll",
       `${chalk.blue("A TypeScript blockchain implementation with PoW consensus")}\n${chalk.gray(
         "TypeScript • Proof-of-Work • UTXO Model • SQLite"
+      )}\n\n${chalk.yellow(
+        "Core commands use data/blockchain.db. Demo commands use an isolated data/demo.db and auto-clean after each run."
       )}\n`
     );
 

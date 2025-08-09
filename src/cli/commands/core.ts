@@ -9,13 +9,9 @@ import {
   initBlockchain,
   ensureDataDirectory,
   handleError,
+  DEFAULT_CORE_DB_PATH,
 } from "../utils";
-import {
-  BaseOptions,
-  MinerOptions,
-  TransferOptions,
-  BalanceOptions,
-} from "../types";
+import { MinerOptions, TransferOptions, BalanceOptions } from "../types";
 
 /**
  * Init command - Initialize a new blockchain
@@ -23,13 +19,12 @@ import {
 export function createInitCommand(): Command {
   return new Command("init")
     .description("Initialize a new blockchain")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
-    .action((options: BaseOptions) => {
+    .action(() => {
       try {
         console.log(chalk.blue("🚀 Initializing blockchain..."));
 
-        ensureDataDirectory(options.database!);
-        const blockchain = initBlockchain(options.database);
+        ensureDataDirectory(DEFAULT_CORE_DB_PATH);
+        const blockchain = initBlockchain(DEFAULT_CORE_DB_PATH);
 
         console.log(chalk.green("✅ Blockchain initialized successfully!"));
 
@@ -49,10 +44,9 @@ export function createMineCommand(): Command {
   return new Command("mine")
     .description("Mine a new block")
     .option("-a, --address <address>", "Miner address", "default-miner")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
     .action(async (options: MinerOptions) => {
       try {
-        const bc = getBlockchain(options.database);
+        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
         console.log(
           chalk.blue(`⛏️  Mining new block for address: ${options.address}`)
         );
@@ -75,16 +69,16 @@ export function createMineCommand(): Command {
 /**
  * Transfer command - Create and submit a transaction
  */
+// todo: change to createTransactionCommand ?
 export function createTransferCommand(): Command {
   return new Command("transfer")
     .description("Create and submit a transaction")
     .requiredOption("-f, --from <address>", "Sender address")
     .requiredOption("-t, --to <address>", "Recipient address")
     .requiredOption("-a, --amount <number>", "Amount to transfer")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
     .action((options: TransferOptions) => {
       try {
-        const bc = getBlockchain(options.database);
+        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
         const amount = parseFloat(options.amount);
 
         if (isNaN(amount) || amount <= 0) {
@@ -131,10 +125,9 @@ export function createBalanceCommand(): Command {
   return new Command("balance")
     .description("Check address balance")
     .requiredOption("-a, --address <address>", "Address to check")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
     .action((options: BalanceOptions) => {
       try {
-        const bc = getBlockchain(options.database);
+        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
         const balance = bc.getBalance(options.address);
         const utxos = bc.getUTXOs(options.address);
 

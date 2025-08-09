@@ -4,8 +4,8 @@
 
 import { Command } from "commander";
 import chalk from "chalk";
-import { getBlockchain, handleError } from "../utils";
-import { BaseOptions, ChainOptions } from "../types";
+import { getBlockchain, handleError, DEFAULT_CORE_DB_PATH } from "../utils";
+import { ChainOptions } from "../types";
 
 /**
  * Chain command - Display the blockchain
@@ -14,10 +14,9 @@ export function createChainCommand(): Command {
   return new Command("chain")
     .description("Display the blockchain")
     .option("-l, --limit <number>", "Limit number of blocks to show", "10")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
     .action((options: ChainOptions) => {
       try {
-        const bc = getBlockchain(options.database);
+        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
         const chain = bc.getChain();
         const limit = parseInt(options.limit || "10");
 
@@ -51,10 +50,9 @@ export function createChainCommand(): Command {
 export function createStatsCommand(): Command {
   return new Command("stats")
     .description("Show blockchain statistics")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
-    .action((options: BaseOptions) => {
+    .action(() => {
       try {
-        const bc = getBlockchain(options.database);
+        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
         const stats = bc.getExtendedStats();
 
         console.log(chalk.blue("📊 Blockchain Statistics:"));
@@ -94,10 +92,9 @@ export function createStatsCommand(): Command {
 export function createMempoolCommand(): Command {
   return new Command("mempool")
     .description("Show pending transactions")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
-    .action((options: BaseOptions) => {
+    .action(() => {
       try {
-        const bc = getBlockchain(options.database);
+        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
         const pool = bc.getTransactionPool();
         const transactions = pool.getAllTransactions();
 

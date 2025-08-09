@@ -4,8 +4,13 @@
 
 import { Command } from "commander";
 import chalk from "chalk";
-import { getBlockchain, handleError } from "../utils";
-import { BaseOptions, DemoTamperOptions } from "../types";
+import {
+  getBlockchain,
+  handleError,
+  DEFAULT_DEMO_DB_PATH,
+  cleanupDemoDatabase,
+} from "../utils";
+import { DemoTamperOptions } from "../types";
 
 /**
  * Demo block structure command - Show detailed block structure (Feature 1)
@@ -13,11 +18,15 @@ import { BaseOptions, DemoTamperOptions } from "../types";
 export function createDemoBlockStructureCommand(): Command {
   return new Command("demo-block-structure")
     .description("Demonstrate blockchain block structure (Requirement 1)")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
     .option("-b, --block <index>", "Block index to examine", "0")
     .action((options: DemoTamperOptions) => {
       try {
-        const bc = getBlockchain(options.database);
+        console.log(
+          chalk.yellow(
+            `ℹ️  Using isolated demo database at ${DEFAULT_DEMO_DB_PATH}. It will be cleared after this demo.`
+          )
+        );
+        const bc = getBlockchain(DEFAULT_DEMO_DB_PATH);
         const blockIndex = parseInt(options.block || "0");
         const chain = bc.getChain();
 
@@ -67,6 +76,8 @@ export function createDemoBlockStructureCommand(): Command {
         );
       } catch (error) {
         handleError("Demo", error);
+      } finally {
+        cleanupDemoDatabase();
       }
     });
 }
@@ -78,10 +89,14 @@ export function createDemoTamperCommand(): Command {
   return new Command("demo-tamper")
     .description("Demonstrate tampering detection")
     .option("-b, --block <index>", "Block index to tamper with", "1")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
     .action((options: DemoTamperOptions) => {
       try {
-        const bc = getBlockchain(options.database);
+        console.log(
+          chalk.yellow(
+            `ℹ️  Using isolated demo database at ${DEFAULT_DEMO_DB_PATH}. It will be cleared after this demo.`
+          )
+        );
+        const bc = getBlockchain(DEFAULT_DEMO_DB_PATH);
         const blockIndex = parseInt(options.block || "1");
 
         console.log(
@@ -99,6 +114,8 @@ export function createDemoTamperCommand(): Command {
         }
       } catch (error) {
         handleError("Demo", error);
+      } finally {
+        cleanupDemoDatabase();
       }
     });
 }
@@ -111,10 +128,14 @@ export function createDemoTransactionsCommand(): Command {
     .description(
       "Demonstrate transaction handling and data management (Requirement 3)"
     )
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
-    .action(async (options: BaseOptions) => {
+    .action(async () => {
       try {
-        const bc = getBlockchain(options.database);
+        console.log(
+          chalk.yellow(
+            `ℹ️  Using isolated demo database at ${DEFAULT_DEMO_DB_PATH}. It will be cleared after this demo.`
+          )
+        );
+        const bc = getBlockchain(DEFAULT_DEMO_DB_PATH);
 
         console.log(chalk.magenta("💸 Demonstrating Transaction Handling..."));
         console.log(
@@ -206,6 +227,8 @@ export function createDemoTransactionsCommand(): Command {
         );
       } catch (error) {
         handleError("Demo", error);
+      } finally {
+        cleanupDemoDatabase();
       }
     });
 }
@@ -218,10 +241,14 @@ export function createDemoMiningCommand(): Command {
     .description(
       "Demonstrate Proof-of-Work consensus mechanism (Requirement 4)"
     )
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
-    .action(async (options: BaseOptions) => {
+    .action(async () => {
       try {
-        const bc = getBlockchain(options.database);
+        console.log(
+          chalk.yellow(
+            `ℹ️  Using isolated demo database at ${DEFAULT_DEMO_DB_PATH}. It will be cleared after this demo.`
+          )
+        );
+        const bc = getBlockchain(DEFAULT_DEMO_DB_PATH);
 
         console.log(chalk.magenta("⛏️  Demonstrating Proof-of-Work Mining..."));
         console.log(
@@ -299,6 +326,8 @@ export function createDemoMiningCommand(): Command {
         );
       } catch (error) {
         handleError("Demo", error);
+      } finally {
+        cleanupDemoDatabase();
       }
     });
 }
@@ -309,10 +338,14 @@ export function createDemoMiningCommand(): Command {
 export function createDemoDoubleSpendCommand(): Command {
   return new Command("demo-double-spend")
     .description("Demonstrate double-spend prevention")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
-    .action((options: BaseOptions) => {
+    .action(() => {
       try {
-        const bc = getBlockchain(options.database);
+        console.log(
+          chalk.yellow(
+            `ℹ️  Using isolated demo database at ${DEFAULT_DEMO_DB_PATH}. It will be cleared after this demo.`
+          )
+        );
+        const bc = getBlockchain(DEFAULT_DEMO_DB_PATH);
 
         console.log(
           chalk.magenta("🔬 Demonstrating double-spend prevention...")
@@ -331,6 +364,8 @@ export function createDemoDoubleSpendCommand(): Command {
         });
       } catch (error) {
         handleError("Demo", error);
+      } finally {
+        cleanupDemoDatabase();
       }
     });
 }
@@ -341,10 +376,14 @@ export function createDemoDoubleSpendCommand(): Command {
 export function createDemoOrderingCommand(): Command {
   return new Command("demo-ordering")
     .description("Demonstrate global ordering of blocks (Requirement 6)")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
-    .action((options: BaseOptions) => {
+    .action(() => {
       try {
-        const bc = getBlockchain(options.database);
+        console.log(
+          chalk.yellow(
+            `ℹ️  Using isolated demo database at ${DEFAULT_DEMO_DB_PATH}. It will be cleared after this demo.`
+          )
+        );
+        const bc = getBlockchain(DEFAULT_DEMO_DB_PATH);
         const chain = bc.getChain();
 
         console.log(chalk.magenta("📅 Demonstrating Global Block Ordering..."));
@@ -412,6 +451,8 @@ export function createDemoOrderingCommand(): Command {
         );
       } catch (error) {
         handleError("Demo", error);
+      } finally {
+        cleanupDemoDatabase();
       }
     });
 }
@@ -422,10 +463,14 @@ export function createDemoOrderingCommand(): Command {
 export function createDemoPersistenceCommand(): Command {
   return new Command("demo-persistence")
     .description("Demonstrate data persistence and recovery (Requirement 7)")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
-    .action(async (options: BaseOptions) => {
+    .action(async () => {
       try {
-        const bc = getBlockchain(options.database);
+        console.log(
+          chalk.yellow(
+            `ℹ️  Using isolated demo database at ${DEFAULT_DEMO_DB_PATH}. It will be cleared after this demo.`
+          )
+        );
+        const bc = getBlockchain(DEFAULT_DEMO_DB_PATH);
 
         console.log(chalk.magenta("💾 Demonstrating Data Persistence..."));
         console.log(chalk.blue("\n📋 Persistence Features (Requirement 7):"));
@@ -433,7 +478,7 @@ export function createDemoPersistenceCommand(): Command {
         const initialStats = bc.getExtendedStats();
 
         console.log(chalk.cyan("   🔸 Current Blockchain State:"));
-        console.log(`     Database: ${options.database}`);
+        console.log(`     Database: ${DEFAULT_DEMO_DB_PATH}`);
         console.log(`     Total blocks: ${initialStats.totalBlocks}`);
         console.log(
           `     Total transactions: ${initialStats.totalTransactions}`
@@ -512,6 +557,8 @@ export function createDemoPersistenceCommand(): Command {
         );
       } catch (error) {
         handleError("Demo", error);
+      } finally {
+        cleanupDemoDatabase();
       }
     });
 }
@@ -522,10 +569,14 @@ export function createDemoPersistenceCommand(): Command {
 export function createDemoFullWorkflowCommand(): Command {
   return new Command("demo-full-workflow")
     .description("Demonstrate complete blockchain workflow (Requirement 8)")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
-    .action(async (options: BaseOptions) => {
+    .action(async () => {
       try {
-        const bc = getBlockchain(options.database);
+        console.log(
+          chalk.yellow(
+            `ℹ️  Using isolated demo database at ${DEFAULT_DEMO_DB_PATH}. It will be cleared after this demo.`
+          )
+        );
+        const bc = getBlockchain(DEFAULT_DEMO_DB_PATH);
 
         console.log(
           chalk.magenta("🎯 Demonstrating Complete Blockchain Workflow...")
@@ -636,6 +687,8 @@ export function createDemoFullWorkflowCommand(): Command {
         );
       } catch (error) {
         handleError("Demo", error);
+      } finally {
+        cleanupDemoDatabase();
       }
     });
 }

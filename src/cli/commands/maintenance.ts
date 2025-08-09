@@ -9,8 +9,9 @@ import {
   resetBlockchain,
   handleError,
   initBlockchain,
+  DEFAULT_CORE_DB_PATH,
 } from "../utils";
-import { BaseOptions, FileOptions } from "../types";
+import { FileOptions } from "../types";
 
 /**
  * Validate command - Validate blockchain integrity
@@ -18,10 +19,9 @@ import { BaseOptions, FileOptions } from "../types";
 export function createValidateCommand(): Command {
   return new Command("validate")
     .description("Validate blockchain integrity")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
-    .action((options: BaseOptions) => {
+    .action(() => {
       try {
-        const bc = getBlockchain(options.database);
+        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
 
         console.log(chalk.blue("🔍 Validating blockchain integrity..."));
 
@@ -51,10 +51,9 @@ export function createExportCommand(): Command {
   return new Command("export")
     .description("Export blockchain to file")
     .requiredOption("-f, --file <path>", "Export file path")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
     .action((options: FileOptions) => {
       try {
-        const bc = getBlockchain(options.database);
+        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
 
         console.log(
           chalk.blue(`📤 Exporting blockchain to ${options.file}...`)
@@ -79,10 +78,9 @@ export function createImportCommand(): Command {
   return new Command("import")
     .description("Import blockchain from file")
     .requiredOption("-f, --file <path>", "Import file path")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
     .action((options: FileOptions) => {
       try {
-        const bc = getBlockchain(options.database);
+        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
 
         console.log(
           chalk.yellow("⚠️  WARNING: This will replace the current blockchain!")
@@ -117,8 +115,7 @@ export function createImportCommand(): Command {
 export function createClearDbCommand(): Command {
   return new Command("clear-db")
     .description("Clear all blockchain data from database")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
-    .action((options: BaseOptions) => {
+    .action(() => {
       try {
         console.log(
           chalk.yellow(
@@ -126,7 +123,7 @@ export function createClearDbCommand(): Command {
           )
         );
 
-        const bc = getBlockchain(options.database);
+        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
         const storage = bc.getStorage();
 
         console.log(chalk.blue("🧹 Clearing database..."));
@@ -149,8 +146,7 @@ export function createClearDbCommand(): Command {
 export function createSeedDbCommand(): Command {
   return new Command("seed-db")
     .description("Seed database with genesis block (only if database is empty)")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
-    .action((options: BaseOptions) => {
+    .action(() => {
       try {
         // Check if database is empty first, before initializing blockchain
         // This prevents automatic genesis block creation
@@ -159,7 +155,7 @@ export function createSeedDbCommand(): Command {
           BlockchainStorage,
         } = require("../../storage/BlockchainStorage");
 
-        const tempDb = new BlockchainDB(options.database);
+        const tempDb = new BlockchainDB(DEFAULT_CORE_DB_PATH);
         const tempStorage = new BlockchainStorage(tempDb);
 
         if (!tempStorage.isDatabaseEmpty()) {
@@ -178,7 +174,7 @@ export function createSeedDbCommand(): Command {
         console.log(chalk.blue("🌱 Seeding database with genesis block..."));
 
         // Now create the blockchain (which will create genesis block)
-        const newBc = initBlockchain(options.database);
+        const newBc = initBlockchain(DEFAULT_CORE_DB_PATH);
         const stats = newBc.getStats();
 
         console.log(chalk.green("✅ Database seeded successfully!"));
@@ -197,8 +193,7 @@ export function createSeedDbCommand(): Command {
 export function createResetDbCommand(): Command {
   return new Command("reset-db")
     .description("Clear database and seed with genesis block")
-    .option("-d, --database <path>", "Database file path", "data/blockchain.db")
-    .action((options: BaseOptions) => {
+    .action(() => {
       try {
         console.log(
           chalk.yellow(
@@ -206,7 +201,7 @@ export function createResetDbCommand(): Command {
           )
         );
 
-        const bc = getBlockchain(options.database);
+        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
         const storage = bc.getStorage();
 
         console.log(chalk.blue("🧹 Clearing database..."));
@@ -216,7 +211,7 @@ export function createResetDbCommand(): Command {
 
         // Reset and reinitialize to create genesis block
         resetBlockchain();
-        const newBc = initBlockchain(options.database);
+        const newBc = initBlockchain(DEFAULT_CORE_DB_PATH);
         const stats = newBc.getStats();
 
         console.log(chalk.green("✅ Database reset and seeded successfully!"));
