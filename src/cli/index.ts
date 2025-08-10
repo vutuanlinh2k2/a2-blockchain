@@ -12,17 +12,14 @@ import {
   createMineCommand,
   createTransactionCommand,
   createBalanceCommand,
-} from "./commands/core";
-
-import {
   createDisplayChainCommand,
   createDisplayMempoolCommand,
-} from "./commands/display";
+} from "./commands/core";
 
 import {
   createClearBlockchainDataCommand,
   createSeedBlockchainDataCommand,
-} from "./commands/utils";
+} from "./commands/maintenance";
 
 import {
   createDemoDoubleSpendCommand,
