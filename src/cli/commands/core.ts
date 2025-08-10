@@ -19,9 +19,6 @@ export function createMineCommand(): Command {
     .action(async (options: MinerOptions) => {
       try {
         const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
-        console.log(
-          chalk.blue(`⛏️  Mining new block for address: ${options.address}`)
-        );
 
         const minedBlock = await bc.mineBlock(options.address!);
         if (!minedBlock) {

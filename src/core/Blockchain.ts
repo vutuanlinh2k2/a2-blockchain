@@ -80,16 +80,16 @@ export class Blockchain {
     this.transactionValidator = new TransactionValidator(this.utxoSet);
 
     // Load existing blockchain from database or initialize with genesis block
-    this.initializeChain();
+    this.loadOrInitializeChain();
 
     // Restore persisted mempool (if any)
     this.restoreMempoolFromStorage();
   }
 
   /**
-   * Initializes the blockchain by loading from database or creating genesis block.
+   * Loads the blockchain from the database or creates a new one with a genesis block.
    */
-  private initializeChain(): void {
+  private loadOrInitializeChain(): void {
     if (this.storage) {
       const loadedBlocks = this.storage.loadBlocks();
 
@@ -108,6 +108,11 @@ export class Blockchain {
             "chain_length",
             this.blocks.length.toString()
           );
+          console.log(
+            chalk.green(
+              `✅ Blockchain loaded from database with ${this.blocks.length} blocks.`
+            )
+          );
         }
       } else {
         this.createGenesisBlock();
@@ -115,7 +120,6 @@ export class Blockchain {
     } else {
       this.createGenesisBlock();
     }
-    console.log(chalk.green("✅ Blockchain initialized and ready to use."));
   }
 
   /**
@@ -399,6 +403,7 @@ export class Blockchain {
         `\n📦 Mining block #${candidateBlock.index} with ${blockTransactions.length} transactions`
       )
     );
+    console.log(`   Difficulty: ${currentDifficulty}`);
 
     // Log a concise, one-line summary for each transaction included in the block
     for (let i = 0; i < blockTransactions.length; i++) {
@@ -1297,7 +1302,7 @@ export class Blockchain {
     if (success) {
       // Reload the blockchain from database
       console.log("🔄 Reloading blockchain from database...");
-      this.initializeChain();
+      this.loadOrInitializeChain();
       console.log("✅ Blockchain import and reload completed successfully");
     } else {
       console.log("❌ Blockchain import failed");
