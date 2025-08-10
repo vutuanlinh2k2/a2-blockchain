@@ -21,7 +21,10 @@ import {
   createSeedBlockchainDataCommand,
 } from "./commands/maintenance";
 
-import { createDemoImmutabilityCommand } from "./commands/demo";
+import {
+  createDemoImmutabilityCommand,
+  createDemoDoubleSpendPreventionCommand,
+} from "./commands/demo";
 
 /**
  * Create the main CLI program with all commands
@@ -56,6 +59,7 @@ export function createProgram(): Command {
 
   // Demo commands - All Required Features (1-8)
   program.addCommand(createDemoImmutabilityCommand()); // Feature 2: Immutability
+  program.addCommand(createDemoDoubleSpendPreventionCommand()); // Feature 3: Double-Spend Prevention
 
   return program;
 }

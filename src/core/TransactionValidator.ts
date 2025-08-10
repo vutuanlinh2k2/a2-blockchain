@@ -301,7 +301,7 @@ export class TransactionValidator {
           };
 
           this.doubleSpendAttempts.push(attempt);
-          console.log("🚨 Double-spend attempt recorded:", attempt);
+          // Intentionally avoid verbose console logging here to prevent duplicate output.
         }
       }
     }

@@ -172,3 +172,69 @@ export function createDemoImmutabilityCommand(): Command {
       }
     });
 }
+
+/**
+ * Creates a command to demonstrate Double-Spend Prevention.
+ * This demo seeds a temporary blockchain, creates a valid transaction,
+ * then attempts to create a conflicting transaction spending the same UTXOs,
+ * showing how the validator rejects the double-spend.
+ */
+export function createDemoDoubleSpendPreventionCommand(): Command {
+  return new Command("demo-double-spend")
+    .description(
+      "Demonstrates double-spend prevention using UTXO and mempool checks"
+    )
+    .action(async () => {
+      try {
+        console.log(
+          chalk.magenta("🔐 Demonstrating Double-Spend Prevention (UTXO Model)")
+        );
+        console.log(
+          chalk.yellow("\nℹ️  Using an in-memory blockchain for this demo.")
+        );
+
+        // 1) Seed a small chain so at least one address has spendable UTXOs
+        console.log(
+          chalk.blue("\n🌱 Seeding blockchain with coinbase rewards...")
+        );
+        const bc = initBlockchain();
+
+        const miner = "demo-miner";
+        const b1 = await bc.mineBlock(miner);
+        if (!b1) throw new Error("Failed to mine initial block");
+        const b2 = await bc.mineBlock(miner);
+        if (!b2) throw new Error("Failed to mine second block");
+
+        console.log(
+          chalk.green(
+            "✅ Blockchain seeded. Proceeding to create transactions..."
+          )
+        );
+
+        // 2) Run the built-in demonstration which constructs two conflicting txs
+        console.log(
+          chalk.red(
+            "\n🔍 Creating a transaction and a conflicting double-spend..."
+          )
+        );
+        const result = bc.demonstrateDoubleSpendPrevention({ quiet: true });
+
+        // 3) Present results
+        if (!result.success) {
+          console.log(
+            chalk.red("❌ Double-spend prevention demo did not succeed.")
+          );
+          console.log(`   Reason: ${result.scenario}`);
+          return;
+        }
+
+        console.log(
+          chalk.magenta(
+            "\n🎉 Conclusion: Once a UTXO is referenced by a pending transaction, any other transaction attempting to spend the same UTXO is rejected."
+          )
+        );
+      } catch (error) {
+        handleError("Demo", error);
+      }
+    });
+}

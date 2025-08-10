@@ -886,7 +886,7 @@ export class Blockchain {
    * Creates a scenario and shows how the system prevents double-spending.
    * @returns Detailed demonstration results
    */
-  public demonstrateDoubleSpendPrevention(): {
+  public demonstrateDoubleSpendPrevention(options?: { quiet?: boolean }): {
     success: boolean;
     originalTx: Transaction | null;
     conflictingTx: Transaction | null;
@@ -896,7 +896,10 @@ export class Blockchain {
     } | null;
     scenario: string;
   } {
-    console.log("🔬 Demonstrating comprehensive double-spend prevention...");
+    const quiet = options?.quiet === true;
+    if (!quiet) {
+      console.log("🔬 Demonstrating comprehensive double-spend prevention...");
+    }
 
     // Find an address with UTXOs for testing
     const allAddresses = this.getAllAddressesWithBalance();
@@ -917,9 +920,11 @@ export class Blockchain {
     const testAddress = allAddresses[0];
     const balance = this.getBalance(testAddress.address);
 
-    console.log(
-      `📝 Using test address: ${testAddress.address} (balance: ${balance})`
-    );
+    if (!quiet) {
+      console.log(
+        `📝 Using test address: ${testAddress.address} (balance: ${balance})`
+      );
+    }
 
     // Create original legitimate transaction
     const originalTx = this.createTransaction(
@@ -938,7 +943,9 @@ export class Blockchain {
       };
     }
 
-    console.log("📋 Scenario: Attempting to spend the same UTXOs twice");
+    if (!quiet) {
+      console.log("📋 Scenario: Attempting to spend the same UTXOs twice");
+    }
 
     // Add original transaction to blockchain (this should succeed)
     const originalValidation = this.addTransaction(originalTx);
@@ -955,8 +962,14 @@ export class Blockchain {
     );
 
     console.log(
-      `🚨 Attempting double-spend with transaction: ${conflictingTx.id}`
+      chalk.yellow(`\n✅ Conflict Transaction created: ${conflictingTx.id}`)
     );
+
+    if (!quiet) {
+      console.log(
+        `\n🚨 Attempting double-spend with transaction: ${conflictingTx.id}`
+      );
+    }
 
     // Try to add conflicting transaction (this should fail)
     const conflictingValidation = this.addTransaction(conflictingTx);
@@ -965,19 +978,22 @@ export class Blockchain {
     const preventionSuccessful =
       originalValidation.isValid && !conflictingValidation.isValid;
 
-    console.log("\n📊 Double-Spend Prevention Analysis:");
-    console.log(`   Original transaction valid: ${originalValidation.isValid}`);
-    console.log(
-      `   Conflicting transaction valid: ${conflictingValidation.isValid}`
-    );
-    console.log(
-      `   Prevention successful: ${preventionSuccessful ? "✅ YES" : "❌ NO"}`
-    );
-
-    if (conflictingValidation.errors.length > 0) {
+    if (!quiet) {
+      console.log("\n📊 Double-Spend Prevention Analysis:");
       console.log(
-        `   Prevention mechanism: ${conflictingValidation.errors.join(", ")}`
+        `   Original transaction valid: ${originalValidation.isValid}`
       );
+      console.log(
+        `   Conflicting transaction valid: ${conflictingValidation.isValid}`
+      );
+      console.log(
+        `   Prevention successful: ${preventionSuccessful ? "✅ YES" : "❌ NO"}`
+      );
+      if (conflictingValidation.errors.length > 0) {
+        console.log(
+          `   Prevention mechanism: ${conflictingValidation.errors.join(", ")}`
+        );
+      }
     }
 
     return {
