@@ -42,7 +42,6 @@ export function createClearBlockchainDataCommand(): Command {
 /**
  * Seed database command - Initialize database with genesis block (if empty)
  */
-// TODO: seed data with more data, move this inside a script
 export function createSeedBlockchainDataCommand(): Command {
   return new Command("seed-chain")
     .description(

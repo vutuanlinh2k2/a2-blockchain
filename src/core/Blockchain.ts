@@ -105,7 +105,7 @@ export class Blockchain {
     } else {
       this.createGenesisBlock();
     }
-    console.log(chalk.green("✅ Blockchain initialized and ready to use.\n"));
+    console.log(chalk.green("✅ Blockchain initialized and ready to use."));
   }
 
   /**
@@ -827,7 +827,7 @@ export class Blockchain {
 
     const transaction = new Transaction(inputs, outputs);
 
-    console.log(`✅ Transaction created: ${transaction.id}`);
+    console.log(chalk.blue(`\n✅ Transaction created: ${transaction.id}`));
     console.log(`   Inputs (${inputs.length}):`);
     inputUTXOs.forEach((utxo, idx) => {
       console.log(
@@ -1137,54 +1137,76 @@ export class Blockchain {
   }
 
   /**
-   * Demonstrates chain tampering for educational purposes.
+   * Demonstrates chain tampering for educational purposes. This method is destructive
+   * and should only be used in controlled demo environments.
    * @param blockIndex - Index of the block to tamper with
-   * @returns True if tampering was detected
+   * @param tamperedAmount - The amount to change a transaction to for the demo
+   * @returns True if tampering was successfully applied to the in-memory chain.
    */
-  public demonstrateTampering(blockIndex: number): boolean {
-    if (blockIndex >= this.blocks.length || blockIndex < 0) {
-      console.log("❌ Invalid block index for tampering demonstration");
+  public tamperBlockData(blockIndex: number, tamperedAmount = 500): boolean {
+    if (blockIndex >= this.blocks.length || blockIndex <= 0) {
+      console.log("❌ Invalid block index for tampering demonstration.");
       return false;
     }
 
-    console.log("🔬 Demonstrating blockchain tampering detection...");
-    console.log(`   Targeting block #${blockIndex}`);
+    const blockToTamper = this.blocks[blockIndex];
 
-    // Store original state
-    const originalChain = this.getChain();
-    const originalBlock = this.blocks[blockIndex];
-
-    console.log(`   Original hash: ${originalBlock.hash}`);
-
-    // Tamper with the block (modify timestamp)
-    const tamperedBlock = new Block(
-      originalBlock.index,
-      originalBlock.transactions,
-      originalBlock.previousHash,
-      originalBlock.nonce,
-      originalBlock.difficulty,
-      originalBlock.timestamp + 1000 // Modify timestamp
+    console.log(
+      `   Original hash of block #${blockIndex}: ${blockToTamper.hash}`
     );
 
-    // Replace the block temporarily
-    this.blocks[blockIndex] = tamperedBlock;
+    const txToTamper = blockToTamper.transactions.find(
+      (tx) => tx.outputs.length > 0 && !tx.isCoinbase()
+    );
 
-    console.log(`   Tampered hash: ${tamperedBlock.hash}`);
+    let tamperedBlock;
 
-    // Validate the chain to detect tampering
-    const isValid = this.validateChain();
-
-    // Restore original chain
-    this.blocks = originalChain;
-
-    if (!isValid) {
-      console.log("✅ Tampering successfully detected!");
-      console.log("   Chain validation failed as expected");
-      return true;
+    if (!txToTamper) {
+      console.log(
+        "   No suitable transaction to tamper with. Modifying timestamp as a fallback."
+      );
+      tamperedBlock = new Block(
+        blockToTamper.index,
+        blockToTamper.transactions,
+        blockToTamper.previousHash,
+        blockToTamper.nonce,
+        blockToTamper.difficulty,
+        blockToTamper.timestamp + 1000 // Modify timestamp
+      );
     } else {
-      console.log("❌ Tampering detection failed!");
-      return false;
+      console.log(
+        `   Tampering with transaction ${txToTamper.id.substring(
+          0,
+          10
+        )}... in block #${blockIndex}`
+      );
+
+      const tamperedTransactions = blockToTamper.transactions.map((tx) => {
+        if (tx.id === txToTamper.id) {
+          const tamperedOutputs = tx.outputs.map((o, i) =>
+            i === 0 ? { ...o, amount: tamperedAmount } : o
+          );
+          return new Transaction(tx.inputs, tamperedOutputs, tx.timestamp);
+        }
+        return tx;
+      });
+
+      tamperedBlock = new Block(
+        blockToTamper.index,
+        tamperedTransactions,
+        blockToTamper.previousHash,
+        blockToTamper.nonce,
+        blockToTamper.difficulty,
+        blockToTamper.timestamp
+      );
     }
+
+    this.blocks[blockIndex] = tamperedBlock;
+    console.log(
+      `   New hash of tampered block #${blockIndex}: ${tamperedBlock.hash}`
+    );
+
+    return true;
   }
 
   /**

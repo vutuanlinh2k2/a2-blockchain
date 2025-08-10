@@ -95,6 +95,15 @@ export class Transaction {
   }
 
   /**
+   * Checks if this transaction is a coinbase transaction.
+   * A coinbase transaction has no inputs and creates new coins.
+   * @returns True if it is a coinbase transaction
+   */
+  public isCoinbase(): boolean {
+    return this.inputs.length === 0;
+  }
+
+  /**
    * Creates a coinbase transaction (mining reward).
    * This is a special transaction with no inputs that creates new coins.
    * @param minerAddress - The address to receive the mining reward
