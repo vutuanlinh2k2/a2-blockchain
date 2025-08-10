@@ -13,14 +13,11 @@ let blockchain: Blockchain | null = null;
 
 // Default database paths
 export const DEFAULT_CORE_DB_PATH = "data/blockchain.db";
-export const DEFAULT_DEMO_DB_PATH = "data/demo.db";
 
 /**
  * Initialize blockchain with default configuration
  */
-export function initBlockchain(
-  dbPath: string = DEFAULT_CORE_DB_PATH
-): Blockchain {
+export function initBlockchain(dbPath?: string): Blockchain {
   const config: BlockchainConfig = {
     genesisMessage: "Genesis Block - TypeScript Blockchain Implementation",
     initialDifficulty: 2, // Lower difficulty for demo purposes
@@ -29,7 +26,9 @@ export function initBlockchain(
   };
 
   // Ensure database directory exists and announce DB in use
-  ensureDataDirectory(dbPath);
+  if (dbPath) {
+    ensureDataDirectory(dbPath);
+  }
 
   return new Blockchain(config, dbPath);
 }
@@ -94,33 +93,4 @@ export function handleError(commandName: string, error: unknown): void {
     chalk.red(`❌ ${commandName} error:`),
     error instanceof Error ? error.message : error
   );
-}
-
-/**
- * Cleanup helper for demo database: clears tables, closes connection, and deletes DB file.
- * Safe to call multiple times.
- */
-export function cleanupDemoDatabase(): void {
-  try {
-    // If a blockchain instance exists, try to clear its data if it's using the demo DB
-    if (blockchain) {
-      try {
-        blockchain.getStorage().clearAllData();
-      } catch {}
-      // Close and reset the global instance
-      closeBlockchain();
-    }
-
-    // Delete the demo DB file if it exists
-    if (fs.existsSync(DEFAULT_DEMO_DB_PATH)) {
-      fs.unlinkSync(DEFAULT_DEMO_DB_PATH);
-      // Also remove WAL/SHM files if present
-      const wal = `${DEFAULT_DEMO_DB_PATH}-wal`;
-      const shm = `${DEFAULT_DEMO_DB_PATH}-shm`;
-      if (fs.existsSync(wal)) fs.unlinkSync(wal);
-      if (fs.existsSync(shm)) fs.unlinkSync(shm);
-    }
-  } catch (e) {
-    // Swallow cleanup errors; demos are best-effort cleanup
-  }
 }

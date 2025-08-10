@@ -45,8 +45,8 @@ export interface ResolvedBlockchainConfig {
  */
 export class Blockchain {
   private blocks: Block[] = [];
-  private readonly db: BlockchainDB;
-  private readonly storage: BlockchainStorage;
+  private readonly db: BlockchainDB | null;
+  private readonly storage: BlockchainStorage | null;
   private readonly transactionPool: TransactionPool;
   private readonly utxoSet: UTXOSet;
   private readonly proofOfWork: ProofOfWork;
@@ -66,8 +66,14 @@ export class Blockchain {
       blockReward: config.blockReward ?? 50,
     } as ResolvedBlockchainConfig;
 
-    this.db = new BlockchainDB(dbPath);
-    this.storage = new BlockchainStorage(this.db);
+    if (dbPath) {
+      this.db = new BlockchainDB(dbPath);
+      this.storage = new BlockchainStorage(this.db);
+    } else {
+      this.db = null;
+      this.storage = null;
+    }
+
     this.transactionPool = new TransactionPool();
     this.utxoSet = new UTXOSet();
     this.proofOfWork = new ProofOfWork();
@@ -84,23 +90,27 @@ export class Blockchain {
    * Initializes the blockchain by loading from database or creating genesis block.
    */
   private initializeChain(): void {
-    const loadedBlocks = this.storage.loadBlocks();
+    if (this.storage) {
+      const loadedBlocks = this.storage.loadBlocks();
 
-    if (loadedBlocks.length > 0) {
-      this.blocks = loadedBlocks;
-      this.reconstructUTXOSetFromDatabase();
+      if (loadedBlocks.length > 0) {
+        this.blocks = loadedBlocks;
+        this.reconstructUTXOSetFromDatabase();
 
-      if (!this.validateChain()) {
-        console.error("❌ Loaded blockchain is invalid! Starting fresh.");
-        this.blocks = [];
-        this.utxoSet.clear();
-        this.createGenesisBlock();
+        if (!this.validateChain()) {
+          console.error("❌ Loaded blockchain is invalid! Starting fresh.");
+          this.blocks = [];
+          this.utxoSet.clear();
+          this.createGenesisBlock();
+        } else {
+          this.storage.saveChainState("chain_tip", this.getLatestBlock().hash);
+          this.storage.saveChainState(
+            "chain_length",
+            this.blocks.length.toString()
+          );
+        }
       } else {
-        this.storage.saveChainState("chain_tip", this.getLatestBlock().hash);
-        this.storage.saveChainState(
-          "chain_length",
-          this.blocks.length.toString()
-        );
+        this.createGenesisBlock();
       }
     } else {
       this.createGenesisBlock();
@@ -112,6 +122,7 @@ export class Blockchain {
    * Restores the in-memory mempool from persisted database entries.
    */
   private restoreMempoolFromStorage(): void {
+    if (!this.storage) return;
     try {
       const rows = this.storage.loadMempoolTransactions();
       if (!rows || rows.length === 0) return;
@@ -143,10 +154,12 @@ export class Blockchain {
     this.updateUTXOSet(genesisBlock);
 
     // Save genesis block to database
-    this.storage.saveBlock(genesisBlock);
-    this.storage.saveChainState("chain_tip", genesisBlock.hash);
-    this.storage.saveChainState("chain_length", "1");
-    this.storage.saveChainState("genesis_hash", genesisBlock.hash);
+    if (this.storage) {
+      this.storage.saveBlock(genesisBlock);
+      this.storage.saveChainState("chain_tip", genesisBlock.hash);
+      this.storage.saveChainState("chain_length", "1");
+      this.storage.saveChainState("genesis_hash", genesisBlock.hash);
+    }
 
     console.log("🎉 Genesis block created and saved");
     console.log(`   Hash: ${genesisBlock.hash}`);
@@ -156,6 +169,7 @@ export class Blockchain {
    * Reconstructs the UTXO set from the database.
    */
   private reconstructUTXOSetFromDatabase(): void {
+    if (!this.storage) return;
     this.utxoSet.clear();
     const loadedUTXOs = this.storage.loadUTXOs();
 
@@ -205,13 +219,15 @@ export class Blockchain {
     this.blocks.push(block);
 
     // Save block to database
-    if (!this.storage.saveBlock(block)) {
-      // Rollback if database save fails
-      this.blocks.pop();
-      console.log(
-        `❌ Failed to save block ${block.index} to database, rolling back`
-      );
-      return false;
+    if (this.storage) {
+      if (!this.storage.saveBlock(block)) {
+        // Rollback if database save fails
+        this.blocks.pop();
+        console.log(
+          `❌ Failed to save block ${block.index} to database, rolling back`
+        );
+        return false;
+      }
     }
 
     // Update UTXO set
@@ -221,8 +237,13 @@ export class Blockchain {
     this.removeTransactionsFromPool(block);
 
     // Update chain state in database
-    this.storage.saveChainState("chain_tip", block.hash);
-    this.storage.saveChainState("chain_length", this.blocks.length.toString());
+    if (this.storage) {
+      this.storage.saveChainState("chain_tip", block.hash);
+      this.storage.saveChainState(
+        "chain_length",
+        this.blocks.length.toString()
+      );
+    }
 
     console.log(`✅ Block ${block.index} added to chain and saved to database`);
 
@@ -298,11 +319,13 @@ export class Blockchain {
       for (const input of transaction.inputs) {
         this.utxoSet.spendUTXO(input.txId, input.outputIndex, transaction.id);
         // Also mark as spent in database
-        this.storage.markUTXOSpent(
-          input.txId,
-          input.outputIndex,
-          transaction.id
-        );
+        if (this.storage) {
+          this.storage.markUTXOSpent(
+            input.txId,
+            input.outputIndex,
+            transaction.id
+          );
+        }
       }
 
       // Add new UTXOs from outputs
@@ -328,7 +351,9 @@ export class Blockchain {
       this.transactionPool.removeTransaction(transaction.id);
       this.transactionValidator.removeFromMempool(transaction.id);
       // Also remove from persisted mempool store
-      this.storage.deleteMempoolTransaction(transaction.id);
+      if (this.storage) {
+        this.storage.deleteMempoolTransaction(transaction.id);
+      }
     }
   }
 
@@ -354,12 +379,19 @@ export class Blockchain {
     // Calculate next difficulty
     const currentDifficulty = this.calculateNextDifficulty();
 
-    // Create candidate block
-    const candidateBlock = this.proofOfWork.createMiningCandidate(
-      this.getLatestBlock().index + 1,
+    // Create candidate block with a timestamp strictly greater than the previous block
+    const previousBlock = this.getLatestBlock();
+    const candidateTimestamp = Math.max(
+      Date.now(),
+      previousBlock.timestamp + 1
+    );
+    const candidateBlock = new Block(
+      previousBlock.index + 1,
       blockTransactions,
-      this.getLatestBlock().hash,
-      currentDifficulty
+      previousBlock.hash,
+      0,
+      currentDifficulty,
+      candidateTimestamp
     );
 
     console.log(
@@ -447,11 +479,13 @@ export class Blockchain {
         console.log(`✅ Transaction added to pool: ${transaction.id}`);
 
         // Persist to mempool storage so it survives CLI process exits
-        this.storage.saveMempoolTransaction(
-          transaction.id,
-          transaction.timestamp,
-          transaction.serialize()
-        );
+        if (this.storage) {
+          this.storage.saveMempoolTransaction(
+            transaction.id,
+            transaction.timestamp,
+            transaction.serialize()
+          );
+        }
 
         // Log any warnings
         if (validationResult.warnings.length > 0) {
@@ -1215,6 +1249,10 @@ export class Blockchain {
    * @returns True if export was successful
    */
   public exportToFile(filePath: string): boolean {
+    if (!this.storage) {
+      console.log("❌ In-memory blockchain cannot be exported.");
+      return false;
+    }
     console.log(`📤 Exporting blockchain to ${filePath}...`);
     const success = this.storage.exportToFile(filePath);
     if (success) {
@@ -1232,6 +1270,10 @@ export class Blockchain {
    * @returns True if import was successful
    */
   public importFromFile(filePath: string): boolean {
+    if (!this.storage) {
+      console.log("❌ In-memory blockchain cannot be imported.");
+      return false;
+    }
     console.log(`📥 Importing blockchain from ${filePath}...`);
     console.log("⚠️  WARNING: This will replace the current blockchain!");
 
@@ -1258,14 +1300,21 @@ export class Blockchain {
       utxoCount: number;
       spentUtxoCount: number;
       chainStateCount: number;
-    };
+    } | null;
     chainState: {
       tip: string | null;
       length: string | null;
       genesisHash: string | null;
-    };
+    } | null;
   } {
     const basicStats = this.getStats();
+    if (!this.storage) {
+      return {
+        ...basicStats,
+        databaseStats: null,
+        chainState: null,
+      };
+    }
     const databaseStats = this.storage.getDatabaseStats();
 
     const chainState = {
@@ -1286,6 +1335,12 @@ export class Blockchain {
    * @returns True if both in-memory and database state are consistent
    */
   public validatePersistenceIntegrity(): boolean {
+    if (!this.storage) {
+      console.log(
+        "✅ In-memory blockchain does not require persistence validation."
+      );
+      return true;
+    }
     console.log("🔍 Validating persistence integrity...");
 
     try {
@@ -1346,6 +1401,9 @@ export class Blockchain {
    * @returns The blockchain storage instance
    */
   public getStorage(): BlockchainStorage {
+    if (!this.storage) {
+      throw new Error("Storage is not available for an in-memory blockchain.");
+    }
     return this.storage;
   }
 
@@ -1353,6 +1411,8 @@ export class Blockchain {
    * Closes the database connection.
    */
   public close(): void {
-    this.db.close();
+    if (this.db) {
+      this.db.close();
+    }
   }
 }

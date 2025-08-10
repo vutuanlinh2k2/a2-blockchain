@@ -1,11 +1,6 @@
 import { Command } from "commander";
 import chalk from "chalk";
-import {
-  handleError,
-  DEFAULT_DEMO_DB_PATH,
-  cleanupDemoDatabase,
-  initBlockchain,
-} from "../utils";
+import { handleError, initBlockchain } from "../utils";
 import { Block } from "../../core/Block";
 import { Transaction } from "../../core/Transaction";
 
@@ -27,14 +22,12 @@ export function createDemoImmutabilityCommand(): Command {
           )
         );
         console.log(
-          chalk.yellow(
-            `\nℹ️  Using isolated demo database at ${DEFAULT_DEMO_DB_PATH}. It will be cleared after this demo.`
-          )
+          chalk.yellow(`\nℹ️  Using an in-memory blockchain for this demo.`)
         );
 
         // 1. Seed the blockchain
         console.log(chalk.blue("\n🌱 Seeding blockchain with sample data..."));
-        const bc = initBlockchain(DEFAULT_DEMO_DB_PATH);
+        const bc = initBlockchain();
 
         const miner = "miner-address";
         const alice = "alice-address";
@@ -42,18 +35,22 @@ export function createDemoImmutabilityCommand(): Command {
         const carol = "carol-address";
 
         // Mine a few blocks to create a chain
-        await bc.mineBlock(miner); // Block 1
+        const b1 = await bc.mineBlock(miner); // Block 1
+        if (!b1) throw new Error("Failed to mine block 1 during seeding");
         const tx1 = bc.createTransaction(miner, alice, 20);
         if (tx1) bc.addTransaction(tx1);
-        await bc.mineBlock(miner); // Block 2
+        const b2 = await bc.mineBlock(miner); // Block 2
+        if (!b2) throw new Error("Failed to mine block 2 during seeding");
 
         const tx2 = bc.createTransaction(alice, bob, 5);
         if (tx2) bc.addTransaction(tx2);
-        await bc.mineBlock(miner); // Block 3
+        const b3 = await bc.mineBlock(miner); // Block 3
+        if (!b3) throw new Error("Failed to mine block 3 during seeding");
 
         const tx3 = bc.createTransaction(bob, carol, 2);
         if (tx3) bc.addTransaction(tx3);
-        await bc.mineBlock(miner); // Block 4
+        const b4 = await bc.mineBlock(miner); // Block 4
+        if (!b4) throw new Error("Failed to mine block 4 during seeding");
 
         console.log(chalk.green("✅ Blockchain seeded with 5 blocks."));
 
@@ -172,8 +169,6 @@ export function createDemoImmutabilityCommand(): Command {
         );
       } catch (error) {
         handleError("Demo", error);
-      } finally {
-        cleanupDemoDatabase();
       }
     });
 }

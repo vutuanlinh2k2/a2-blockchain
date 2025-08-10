@@ -119,12 +119,6 @@ export class Block {
       return false;
     }
 
-    // Check timestamp is not in the future
-    const now = Date.now();
-    if (this.timestamp > now) {
-      console.log(`❌ Block ${this.index}: Timestamp is in the future`);
-      return false;
-    }
 
     return true;
   }
