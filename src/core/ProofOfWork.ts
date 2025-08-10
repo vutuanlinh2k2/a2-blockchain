@@ -40,7 +40,7 @@ export class ProofOfWork {
   constructor(config?: Partial<DifficultyConfig>) {
     this.config = {
       targetBlockTime: 10000, // 10 seconds default
-      adjustmentInterval: 10, // Adjust every 10 blocks
+      adjustmentInterval: 5, // Adjust every 5 blocks
       maxAdjustment: 4, // Max 4x difficulty change
       ...config,
     };

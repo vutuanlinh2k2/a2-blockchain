@@ -24,6 +24,7 @@ import {
 import {
   createDemoImmutabilityCommand,
   createDemoDoubleSpendPreventionCommand,
+  createDemoDifficultyAdjustmentCommand,
 } from "./commands/demo";
 
 /**
@@ -60,6 +61,7 @@ export function createProgram(): Command {
   // Demo commands - All Required Features (1-8)
   program.addCommand(createDemoImmutabilityCommand()); // Feature 2: Immutability
   program.addCommand(createDemoDoubleSpendPreventionCommand()); // Feature 3: Double-Spend Prevention
+  program.addCommand(createDemoDifficultyAdjustmentCommand());
 
   return program;
 }

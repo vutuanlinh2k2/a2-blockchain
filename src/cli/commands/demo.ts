@@ -3,6 +3,7 @@ import chalk from "chalk";
 import { handleError, initBlockchain } from "../utils";
 import { Block } from "../../core/Block";
 import { Transaction } from "../../core/Transaction";
+import { ProofOfWork } from "../../core/ProofOfWork";
 
 /**
  * Creates a command to demonstrate the immutability of the blockchain.
@@ -235,6 +236,152 @@ export function createDemoDoubleSpendPreventionCommand(): Command {
         );
       } catch (error) {
         handleError("Demo", error);
+      }
+    });
+}
+
+/**
+ * Creates a command to demonstrate dynamic difficulty adjustment.
+ * This demo mines enough blocks to trigger the first difficulty adjustment
+ * and shows how the system responds to block mining times.
+ */
+export function createDemoDifficultyAdjustmentCommand(): Command {
+  return new Command("demo-difficulty-adjustment")
+    .description(
+      "Demonstrates deterministic difficulty adjustment by simulating fast and slow block times"
+    )
+    .action(async () => {
+      try {
+        console.log(
+          chalk.magenta(
+            "📊 Demonstrating Deterministic Difficulty Adjustment 📊"
+          )
+        );
+        console.log(
+          chalk.yellow("\nℹ️  Using an in-memory blockchain for this demo.")
+        );
+
+        // --- Demo Setup ---
+        const bc = initBlockchain();
+        const pow = new ProofOfWork();
+        const config = pow.getConfig();
+        const miner = "demo-miner";
+        const interval = config.adjustmentInterval;
+        const initialDifficulty = bc.getChain()[0].difficulty;
+
+        console.log(chalk.blue("\n⚙️  Initial Configuration:"));
+        console.log(`   - Initial Difficulty for Block #1: 2`);
+        console.log(
+          `   - Target Block Time: ${config.targetBlockTime / 1000}s`
+        );
+        console.log(`   - Adjustment Interval: Every ${interval} blocks`);
+
+        // --- Scenario 1: Simulate blocks being mined TOO FAST ---
+        console.log(
+          chalk.cyan(
+            `\n\n--- SCENARIO 1: SIMULATING FAST MINING (Difficulty should increase) ---`
+          )
+        );
+        console.log(
+          `   Mining ${interval} blocks with an artificially short delay (1 second apart)...`
+        );
+
+        let lastTimestamp = bc.getLatestBlock().timestamp;
+        for (let i = 1; i <= interval; i++) {
+          lastTimestamp += 1000; // 1 second
+          const block = await bc.mineBlock(miner, lastTimestamp);
+          if (!block) throw new Error(`Scenario 1: Failed to mine block #${i}`);
+        }
+
+        // The last block of the interval (Block #10) is mined with the old difficulty.
+        const lastFastBlock = bc.getLatestBlock();
+        console.log(
+          chalk.blue(
+            `\n⛏️  Mining one more block (#${
+              lastFastBlock.index + 1
+            }) to see the adjusted difficulty...`
+          )
+        );
+        const firstAdjustedUpBlock = await bc.mineBlock(miner);
+        if (!firstAdjustedUpBlock)
+          throw new Error("Failed to mine adjustment block");
+
+        console.log(chalk.blue("\n📈 Analysis of Scenario 1:"));
+        console.log(
+          `   - Difficulty for blocks #1-${lastFastBlock.index} was: ${lastFastBlock.difficulty}`
+        );
+        console.log(
+          chalk.magenta(
+            `   - After fast mining, difficulty for block #${firstAdjustedUpBlock.index} adjusted to: ${firstAdjustedUpBlock.difficulty}`
+          )
+        );
+        if (firstAdjustedUpBlock.difficulty > lastFastBlock.difficulty) {
+          console.log(
+            chalk.green("   ✅ SUCCESS: Difficulty correctly increased.")
+          );
+        } else {
+          console.log(
+            chalk.red("   ❌ FAILURE: Difficulty did not increase as expected.")
+          );
+        }
+
+        // --- Scenario 2: Simulate blocks being mined TOO SLOW ---
+        console.log(
+          chalk.cyan(
+            `\n\n--- SCENARIO 2: SIMULATING SLOW MINING (Difficulty should decrease) ---`
+          )
+        );
+        console.log(
+          `   Mining another ${interval - 1} blocks with a long delay (20 seconds apart)...`
+        );
+
+        lastTimestamp = bc.getLatestBlock().timestamp;
+        // We've already mined one block of this interval (firstAdjustedUpBlock), so we need interval - 1 more.
+        for (let i = 1; i < interval; i++) {
+          lastTimestamp += 20000; // 20 seconds
+          const block = await bc.mineBlock(miner, lastTimestamp);
+          if (!block) throw new Error(`Scenario 2: Failed to mine block`);
+        }
+
+        const lastSlowBlock = bc.getLatestBlock();
+        console.log(
+          chalk.blue(
+            `\n⛏️  Mining one more block (#${
+              lastSlowBlock.index + 1
+            }) to see the adjusted difficulty...`
+          )
+        );
+        const firstAdjustedDownBlock = await bc.mineBlock(miner);
+        if (!firstAdjustedDownBlock)
+          throw new Error("Failed to mine 2nd adjustment block");
+
+        console.log(chalk.blue("\n📉 Analysis of Scenario 2:"));
+        console.log(
+          `   - Difficulty for blocks up to #${lastSlowBlock.index} was: ${lastSlowBlock.difficulty}`
+        );
+        console.log(
+          chalk.magenta(
+            `   - After slow mining, difficulty for block #${firstAdjustedDownBlock.index} adjusted to: ${firstAdjustedDownBlock.difficulty}`
+          )
+        );
+
+        if (firstAdjustedDownBlock.difficulty < lastSlowBlock.difficulty) {
+          console.log(
+            chalk.green("   ✅ SUCCESS: Difficulty correctly decreased.")
+          );
+        } else {
+          console.log(
+            chalk.red("   ❌ FAILURE: Difficulty did not decrease as expected.")
+          );
+        }
+
+        console.log(
+          chalk.magenta(
+            "\n\n🎉 Conclusion: The demo successfully showed the difficulty adjustment mechanism responding to both fast and slow block mining simulations."
+          )
+        );
+      } catch (error) {
+        handleError("Difficulty Adjustment Demo", error);
       }
     });
 }

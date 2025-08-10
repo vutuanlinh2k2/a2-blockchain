@@ -366,7 +366,10 @@ export class Blockchain {
    * @param minerAddress - Address to receive the mining reward
    * @returns The mined block, or null if mining failed
    */
-  public async mineBlock(minerAddress: string): Promise<Block | null> {
+  public async mineBlock(
+    minerAddress: string,
+    overrideTimestamp?: number
+  ): Promise<Block | null> {
     // Create coinbase transaction (mining reward)
     const coinbaseTransaction = Transaction.createCoinbase(
       minerAddress,
@@ -385,10 +388,8 @@ export class Blockchain {
 
     // Create candidate block with a timestamp strictly greater than the previous block
     const previousBlock = this.getLatestBlock();
-    const candidateTimestamp = Math.max(
-      Date.now(),
-      previousBlock.timestamp + 1
-    );
+    const candidateTimestamp =
+      overrideTimestamp ?? Math.max(Date.now(), previousBlock.timestamp + 1);
     const candidateBlock = new Block(
       previousBlock.index + 1,
       blockTransactions,
@@ -456,7 +457,15 @@ export class Blockchain {
    * @returns The appropriate difficulty level
    */
   private calculateNextDifficulty(): number {
-    const currentDifficulty = this.getLatestBlock().difficulty;
+    const latestBlock = this.getLatestBlock();
+
+    // For the block right after genesis, use the configured initial difficulty.
+    if (latestBlock.index === 0) {
+      return this.config.initialDifficulty;
+    }
+
+    // For all other blocks, use the dynamic adjustment logic.
+    const currentDifficulty = latestBlock.difficulty;
     return this.proofOfWork.calculateNextDifficulty(
       this.blocks,
       currentDifficulty
