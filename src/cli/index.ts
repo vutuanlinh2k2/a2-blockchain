@@ -9,7 +9,6 @@ import { showBanner, closeBlockchain } from "./utils";
 
 // Import command creators
 import {
-  createInitCommand,
   createMineCommand,
   createTransactionCommand,
   createBalanceCommand,
@@ -55,7 +54,6 @@ export function createProgram(): Command {
     );
 
   // Core blockchain commands
-  program.addCommand(createInitCommand());
   program.addCommand(createMineCommand());
   program.addCommand(createTransactionCommand());
   program.addCommand(createBalanceCommand());
@@ -86,12 +84,11 @@ export function createProgram(): Command {
  */
 export async function runCLI(): Promise<void> {
   try {
-    showBanner();
-
     const program = createProgram();
 
     // Show help if no arguments provided
     if (process.argv.length <= 2) {
+      showBanner();
       program.help();
       return;
     }

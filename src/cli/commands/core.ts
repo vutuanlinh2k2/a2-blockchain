@@ -14,30 +14,6 @@ import {
 import { MinerOptions, TransferOptions, BalanceOptions } from "../types";
 
 /**
- * Init command - Initialize a new blockchain
- */
-export function createInitCommand(): Command {
-  return new Command("init")
-    .description("Initialize a new blockchain")
-    .action(() => {
-      try {
-        console.log(chalk.blue("🚀 Initializing blockchain..."));
-
-        ensureDataDirectory(DEFAULT_CORE_DB_PATH);
-        const blockchain = initBlockchain(DEFAULT_CORE_DB_PATH);
-
-        console.log(chalk.green("✅ Blockchain initialized successfully!"));
-
-        const stats = blockchain.getExtendedStats();
-        console.log(`📊 Chain length: ${stats.totalBlocks} blocks`);
-        console.log(`🔗 Genesis hash: ${stats.chainState.genesisHash}`);
-      } catch (error) {
-        handleError("Initialization", error);
-      }
-    });
-}
-
-/**
  * Mine command - Mine a new block
  */
 export function createMineCommand(): Command {

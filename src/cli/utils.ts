@@ -30,7 +30,6 @@ export function initBlockchain(
 
   // Ensure database directory exists and announce DB in use
   ensureDataDirectory(dbPath);
-  console.log(chalk.gray(`Using database: ${dbPath}`));
 
   return new Blockchain(config, dbPath);
 }

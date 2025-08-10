@@ -84,30 +84,18 @@ export class Blockchain {
    * Initializes the blockchain by loading from database or creating genesis block.
    */
   private initializeChain(): void {
-    console.log("🔄 Initializing blockchain...");
-
-    // Try to load existing blockchain from database
     const loadedBlocks = this.storage.loadBlocks();
 
     if (loadedBlocks.length > 0) {
-      console.log(
-        `📖 Loaded existing blockchain with ${loadedBlocks.length} blocks`
-      );
       this.blocks = loadedBlocks;
-
-      // Reconstruct UTXO set from database
       this.reconstructUTXOSetFromDatabase();
 
-      // Validate the loaded chain
       if (!this.validateChain()) {
         console.error("❌ Loaded blockchain is invalid! Starting fresh.");
         this.blocks = [];
         this.utxoSet.clear();
         this.createGenesisBlock();
       } else {
-        console.log("✅ Loaded blockchain validated successfully\n");
-
-        // Save chain tip to state
         this.storage.saveChainState("chain_tip", this.getLatestBlock().hash);
         this.storage.saveChainState(
           "chain_length",
@@ -115,9 +103,9 @@ export class Blockchain {
         );
       }
     } else {
-      console.log("📝 No existing blockchain found, creating genesis block");
       this.createGenesisBlock();
     }
+    console.log(chalk.green("✅ Blockchain initialized and ready to use.\n"));
   }
 
   /**
@@ -168,16 +156,12 @@ export class Blockchain {
    * Reconstructs the UTXO set from the database.
    */
   private reconstructUTXOSetFromDatabase(): void {
-    console.log("🔄 Reconstructing UTXO set from database...");
-
     this.utxoSet.clear();
     const loadedUTXOs = this.storage.loadUTXOs();
 
     for (const utxo of loadedUTXOs) {
       this.utxoSet.addUTXO(utxo);
     }
-
-    console.log(`💰 Reconstructed UTXO set with ${loadedUTXOs.length} UTXOs`);
   }
 
   /**
@@ -681,8 +665,6 @@ export class Blockchain {
    * @returns True if the entire chain is valid
    */
   public validateChain(): boolean {
-    console.log("🔍 Validating entire blockchain...");
-
     for (let i = 1; i < this.blocks.length; i++) {
       const currentBlock = this.blocks[i];
       const previousBlock = this.blocks[i - 1];
@@ -705,8 +687,6 @@ export class Blockchain {
         return false;
       }
     }
-
-    console.log("✅ Blockchain validation successful");
     return true;
   }
 
