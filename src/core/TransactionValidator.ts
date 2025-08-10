@@ -102,10 +102,6 @@ export class TransactionValidator {
       }
     }
 
-    // Check transaction fees (warning if no fee)
-    const feeCheck = this.checkTransactionFees(transaction);
-    result.warnings.push(...feeCheck.warnings);
-
     return result;
   }
 
@@ -227,49 +223,6 @@ export class TransactionValidator {
           }
         }
       }
-    }
-
-    return result;
-  }
-
-  /**
-   * Checks transaction fees and provides warnings.
-   * @param transaction - The transaction to check
-   * @returns Validation result with warnings
-   */
-  // TODO: check back the logic of this
-  private checkTransactionFees(transaction: Transaction): ValidationResult {
-    const result: ValidationResult = {
-      isValid: true,
-      errors: [],
-      warnings: [],
-    };
-
-    let totalInputValue = 0;
-    const totalOutputValue = transaction.getTotalOutputAmount();
-
-    // Calculate total input value
-    for (const input of transaction.inputs) {
-      const utxos = this.utxoSet.getUTXOsForAddress(""); // Get all UTXOs
-      const utxo = utxos.find(
-        (u) => u.txId === input.txId && u.outputIndex === input.outputIndex
-      );
-
-      if (utxo) {
-        totalInputValue += utxo.amount;
-      }
-    }
-
-    const fee = totalInputValue - totalOutputValue;
-
-    if (fee < 0) {
-      result.warnings.push("Transaction creates value (should not happen)");
-    } else if (fee === 0) {
-      result.warnings.push("Transaction has no fee (may be deprioritized)");
-    } else if (fee > totalInputValue * 0.1) {
-      result.warnings.push(
-        `Transaction fee is very high: ${fee} (${((fee / totalInputValue) * 100).toFixed(2)}%)`
-      );
     }
 
     return result;
