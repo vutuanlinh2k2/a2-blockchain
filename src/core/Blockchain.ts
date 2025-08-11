@@ -20,23 +20,10 @@ export interface ChainStats {
   totalValue: number;
 }
 
-/**
- * Configuration for the blockchain.
- */
 export interface BlockchainConfig {
   genesisMessage?: string;
-  initialDifficulty?: number;
-  maxBlockSize?: number;
-  blockReward?: number;
-  minerAddress: string;
-}
-
-export interface ResolvedBlockchainConfig {
-  genesisMessage?: string;
   initialDifficulty: number;
-  maxBlockSize: number;
   blockReward: number;
-  minerAddress: string;
 }
 
 /**
@@ -50,7 +37,7 @@ export class Blockchain {
   private readonly transactionPool: TransactionPool;
   private readonly utxoSet: UTXOSet;
   private readonly proofOfWork: ProofOfWork;
-  private readonly config: ResolvedBlockchainConfig;
+  private readonly config: BlockchainConfig;
   private readonly transactionValidator: TransactionValidator;
 
   /**
@@ -59,12 +46,7 @@ export class Blockchain {
    * @param dbPath - Path to the SQLite database file
    */
   constructor(config: BlockchainConfig, dbPath?: string) {
-    this.config = {
-      ...config,
-      initialDifficulty: config.initialDifficulty ?? 4,
-      maxBlockSize: config.maxBlockSize ?? 1000000, // 1MB
-      blockReward: config.blockReward ?? 50,
-    } as ResolvedBlockchainConfig;
+    this.config = config;
 
     if (dbPath) {
       this.db = new BlockchainDB(dbPath);

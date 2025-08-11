@@ -20,9 +20,8 @@ export const DEFAULT_CORE_DB_PATH = "data/blockchain.db";
 export function initBlockchain(dbPath?: string): Blockchain {
   const config: BlockchainConfig = {
     genesisMessage: "Genesis Block - TypeScript Blockchain Implementation",
-    initialDifficulty: 2, // Lower difficulty for demo purposes
+    initialDifficulty: 2, // Low difficulty for demo purposes
     blockReward: 50,
-    minerAddress: "genesis-miner",
   };
 
   // Ensure database directory exists and announce DB in use
