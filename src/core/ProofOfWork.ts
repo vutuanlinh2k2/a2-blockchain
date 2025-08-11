@@ -1,6 +1,5 @@
 import { Block } from "./Block";
 import { Transaction } from "./Transaction";
-import { Hash } from "../crypto/Hash";
 
 /**
  * Mining statistics for tracking performance and progress.
@@ -61,7 +60,7 @@ export class ProofOfWork {
       attempts: 0,
       hashRate: 0,
       difficulty: block.difficulty,
-      targetHash: Hash.getDifficultyTarget(block.difficulty),
+      targetHash: this.getDifficultyTarget(block.difficulty),
       success: false,
     };
 
@@ -77,7 +76,7 @@ export class ProofOfWork {
         stats.endTime = Date.now();
         stats.finalHash = currentBlock.hash;
         stats.success = true;
-        stats.hashRate = Hash.calculateHashRate(
+        stats.hashRate = this.calculateHashRate(
           stats.attempts,
           stats.endTime - stats.startTime
         );
@@ -92,7 +91,7 @@ export class ProofOfWork {
         console.log(
           `   Time: ${((stats.endTime - stats.startTime) / 1000).toFixed(2)}s`
         );
-        console.log(`   Hash Rate: ${Hash.formatHashRate(stats.hashRate)}`);
+        console.log(`   Hash Rate: ${this.formatHashRate(stats.hashRate)}`);
 
         return currentBlock;
       }
@@ -105,7 +104,7 @@ export class ProofOfWork {
       const now = Date.now();
       if (now - lastProgressUpdate >= progressInterval) {
         const elapsed = now - stats.startTime;
-        stats.hashRate = Hash.calculateHashRate(stats.attempts, elapsed);
+        stats.hashRate = this.calculateHashRate(stats.attempts, elapsed);
 
         // Call progress callback if provided
         if (onProgress) {
@@ -122,7 +121,7 @@ export class ProofOfWork {
         const timeElapsed = (elapsed / 1000).toFixed(1);
         console.log(
           `⛏️  Mining... ${stats.attempts.toLocaleString()} attempts, ` +
-            `${Hash.formatHashRate(stats.hashRate)}, ${timeElapsed}s`
+            `${this.formatHashRate(stats.hashRate)}, ${timeElapsed}s`
         );
       }
 
@@ -247,7 +246,11 @@ export class ProofOfWork {
    * @returns Estimated time in seconds
    */
   public estimateMiningTime(difficulty: number, hashRate: number): number {
-    return Hash.estimateMiningTime(difficulty, hashRate);
+    if (hashRate === 0) return Infinity;
+
+    // Expected number of attempts = 2^(4 * difficulty) for hexadecimal
+    const expectedAttempts = Math.pow(16, difficulty);
+    return expectedAttempts / hashRate;
   }
 
   /**
@@ -267,7 +270,7 @@ export class ProofOfWork {
       if (stats.attempts - lastLoggedAttempts >= logInterval) {
         const elapsed = Date.now() - (stats.startTime || 0);
         const timeStr = (elapsed / 1000).toFixed(1);
-        const hashRateStr = Hash.formatHashRate(stats.hashRate || 0);
+        const hashRateStr = this.formatHashRate(stats.hashRate || 0);
         const eta = this.estimateMiningTime(
           stats.difficulty || 1,
           stats.hashRate || 1
@@ -309,5 +312,42 @@ export class ProofOfWork {
     difficulty: number
   ): Block {
     return Block.createCandidate(index, transactions, previousHash, difficulty);
+  }
+
+  /**
+   * Generates a target hash string for a given difficulty.
+   * @param difficulty - The difficulty level
+   * @returns A string representing the target (leading zeros followed by 'f's)
+   */
+  private getDifficultyTarget(difficulty: number): string {
+    return "0".repeat(difficulty) + "f".repeat(64 - difficulty);
+  }
+
+  /**
+   * Calculates the hash rate (hashes per second) based on time and attempts.
+   * @param attempts - Number of hash attempts made
+   * @param timeMs - Time taken in milliseconds
+   * @returns Hash rate in hashes per second
+   */
+  private calculateHashRate(attempts: number, timeMs: number): number {
+    if (timeMs === 0) return 0;
+    return Math.round((attempts / timeMs) * 1000);
+  }
+
+  /**
+   * Formats hash rate for human-readable display.
+   * @param hashRate - Hash rate in hashes per second
+   * @returns Formatted string (e.g., "1.2 KH/s", "3.4 MH/s")
+   */
+  private formatHashRate(hashRate: number): string {
+    if (hashRate < 1000) {
+      return `${hashRate} H/s`;
+    } else if (hashRate < 1000000) {
+      return `${(hashRate / 1000).toFixed(1)} KH/s`;
+    } else if (hashRate < 1000000000) {
+      return `${(hashRate / 1000000).toFixed(1)} MH/s`;
+    } else {
+      return `${(hashRate / 1000000000).toFixed(1)} GH/s`;
+    }
   }
 }

@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { Transaction } from "./Transaction";
-import { MerkleTree } from "../crypto/MerkleTree";
+import { MerkleTree } from "./MerkleTree";
 
 /**
  * Represents a block in the blockchain.

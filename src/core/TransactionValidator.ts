@@ -1,4 +1,4 @@
-import { Transaction, TxInput, UTXO, UTXOSet } from "./Transaction";
+import { Transaction, TxInput, UTXOSet } from "./Transaction";
 
 /**
  * Result of a transaction validation check.
