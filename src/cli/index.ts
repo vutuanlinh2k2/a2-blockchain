@@ -93,6 +93,3 @@ export async function runCLI(): Promise<void> {
     closeBlockchain();
   }
 }
-
-// Re-export utilities for external use
-export { showBanner, getBlockchain, initBlockchain } from "./utils";

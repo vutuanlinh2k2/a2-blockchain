@@ -1256,52 +1256,6 @@ export class Blockchain {
   }
 
   /**
-   * Exports the entire blockchain to a file.
-   * @param filePath - Path where to save the backup file
-   * @returns True if export was successful
-   */
-  public exportToFile(filePath: string): boolean {
-    if (!this.storage) {
-      console.log("❌ In-memory blockchain cannot be exported.");
-      return false;
-    }
-    console.log(`📤 Exporting blockchain to ${filePath}...`);
-    const success = this.storage.exportToFile(filePath);
-    if (success) {
-      console.log("✅ Blockchain export completed successfully");
-    } else {
-      console.log("❌ Blockchain export failed");
-    }
-    return success;
-  }
-
-  /**
-   * Imports blockchain data from a file.
-   * WARNING: This will replace the current blockchain!
-   * @param filePath - Path to the backup file to import
-   * @returns True if import was successful
-   */
-  public importFromFile(filePath: string): boolean {
-    if (!this.storage) {
-      console.log("❌ In-memory blockchain cannot be imported.");
-      return false;
-    }
-    console.log(`📥 Importing blockchain from ${filePath}...`);
-    console.log("⚠️  WARNING: This will replace the current blockchain!");
-
-    const success = this.storage.importFromFile(filePath);
-    if (success) {
-      // Reload the blockchain from database
-      console.log("🔄 Reloading blockchain from database...");
-      this.loadOrInitializeChain();
-      console.log("✅ Blockchain import and reload completed successfully");
-    } else {
-      console.log("❌ Blockchain import failed");
-    }
-    return success;
-  }
-
-  /**
    * Gets comprehensive statistics about the blockchain including database stats.
    * @returns Extended chain statistics
    */

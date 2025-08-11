@@ -31,7 +31,7 @@ export function createMineCommand(): Command {
 }
 
 /**
- * Transfer command - Create and submit a transaction
+ * Transaction command - Create and submit a transaction
  */
 export function createTransactionCommand(): Command {
   return new Command("tx")

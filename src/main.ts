@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /**
  * Main entry point for the Blockchain CLI
  * This file provides a minimal entry point that delegates to the CLI module
