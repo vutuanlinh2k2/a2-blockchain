@@ -1,7 +1,6 @@
 import { Command } from "commander";
 import chalk from "chalk";
 import {
-  getBlockchain,
   handleError,
   DEFAULT_CORE_DB_PATH,
   resetBlockchain,
@@ -13,7 +12,6 @@ import {
   MinerOptions,
   TransactionOptions,
   BalanceOptions,
-  ChainOptions,
   InitOptions,
 } from "../types";
 import { format } from "date-fns";
@@ -233,8 +231,7 @@ export function createBalanceCommand(): Command {
 export function createDisplayChainCommand(): Command {
   return new Command("display-chain")
     .description("Display the blockchain")
-    .option("-l, --limit <number>", "Limit number of blocks to show", "10")
-    .action((options: ChainOptions) => {
+    .action(() => {
       try {
         const result = tryGetBlockchain(DEFAULT_CORE_DB_PATH);
         if (result.error) {
@@ -244,14 +241,12 @@ export function createDisplayChainCommand(): Command {
 
         const bc = result.blockchain!;
         const chain = bc.getChain();
-        const limit = parseInt(options.limit || "10");
 
         console.log(chalk.cyan("\n⛓️  Blockchain:"));
         console.log(`📊 Total blocks: ${chain.length}`);
 
-        const blocksToShow = chain.slice(-limit);
-        blocksToShow.forEach((block, index) => {
-          const isLatest = index === blocksToShow.length - 1;
+        chain.forEach((block, index) => {
+          const isLatest = index === chain.length - 1;
           const prefix = isLatest ? "🔴" : "🔗";
 
           console.log(chalk.yellow(`\n${prefix} Block #${block.index}`));

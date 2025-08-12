@@ -96,7 +96,7 @@ npm start -- tx --from <address> --to <address> --amount <number>
 npm start -- balance --address <address>
 
 # Display blockchain
-npm start -- display-chain [--limit <number>]
+npm start -- display-chain
 
 # Show pending transactions
 npm start -- display-mempool

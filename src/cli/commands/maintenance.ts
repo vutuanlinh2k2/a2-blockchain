@@ -1,12 +1,6 @@
 import { Command } from "commander";
 import chalk from "chalk";
-import {
-  getBlockchain,
-  resetBlockchain,
-  handleError,
-  initBlockchain,
-  DEFAULT_CORE_DB_PATH,
-} from "../utils";
+import { getBlockchain, handleError, DEFAULT_CORE_DB_PATH } from "../utils";
 
 /**
  * Seed database command - Initialize database with genesis block (if empty)
