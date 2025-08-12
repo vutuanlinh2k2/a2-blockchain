@@ -93,13 +93,14 @@ export function createBalanceCommand(): Command {
         const balance = bc.getBalance(options.address);
         const utxos = bc.getUTXOs(options.address);
 
-        console.log(chalk.magenta(`💰 Balance for ${options.address}:`));
+        console.log();
+        console.log(chalk.blue(`💰 Balance for ${options.address}:`));
         console.log(
           `   Total: ${balance} ${chalk.gray("(confirmed UTXOs only; pending mempool transactions are excluded until mined)")}`
         );
 
         if (utxos.length > 0) {
-          console.log(`📋 UTXOs (${utxos.length}):`);
+          console.log(chalk.blue(`📋 UTXOs (${utxos.length}):`));
           utxos.forEach((utxo, index) => {
             console.log(
               `   [${index + 1}] id=${utxo.txId}, outputIndex=${utxo.outputIndex}, amount=${utxo.amount}`
@@ -125,7 +126,7 @@ export function createDisplayChainCommand(): Command {
         const chain = bc.getChain();
         const limit = parseInt(options.limit || "10");
 
-        console.log(chalk.cyan("⛓️  Blockchain:"));
+        console.log(chalk.cyan("\n⛓️  Blockchain:"));
         console.log(`📊 Total blocks: ${chain.length}`);
 
         const blocksToShow = chain.slice(-limit);
@@ -133,11 +134,11 @@ export function createDisplayChainCommand(): Command {
           const isLatest = index === blocksToShow.length - 1;
           const prefix = isLatest ? "🔴" : "🔗";
 
-          console.log(`\n${prefix} Block #${block.index}`);
+          console.log(chalk.yellow(`\n${prefix} Block #${block.index}`));
           console.log(`   Hash: ${block.hash}`);
           console.log(`   Previous: ${block.previousHash}`);
           console.log(
-            `   Timestamp: ${new Date(block.timestamp).toISOString()}`
+            `   Timestamp: ${format(new Date(block.timestamp), "dd-MM-yyyy (HH:mm:ss)")}`
           );
           console.log(`   Transactions: ${block.getTransactionCount()}`);
           console.log(`   Difficulty: ${block.difficulty}`);
@@ -163,7 +164,7 @@ export function createDisplayMempoolCommand(): Command {
         const utxoSet = bc.getUTXOSet();
 
         console.log(
-          chalk.cyan(`📋 Transaction Pool (${transactions.length} pending):`)
+          chalk.cyan(`\n📋 Transaction Pool (${transactions.length}):`)
         );
 
         if (transactions.length === 0) {
@@ -171,7 +172,7 @@ export function createDisplayMempoolCommand(): Command {
         } else {
           transactions.forEach((tx, index) => {
             console.log(
-              chalk.yellow(`\n[${index + 1}] Transaction ID: ${tx.id}`)
+              chalk.yellow(`[${index + 1}] Transaction ID: ${tx.id}`)
             );
             console.log(
               `    Received: ${format(new Date(tx.timestamp), "dd-MM-yyyy (HH:mm:ss)")}`
