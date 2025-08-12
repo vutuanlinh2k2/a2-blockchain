@@ -218,7 +218,7 @@ export class TransactionValidator {
           if (inputId === mempoolInputId) {
             result.isValid = false;
             result.errors.push(
-              `Double-spend detected: UTXO ${inputId} already spent by transaction ${mempoolTxId}`
+              `Double-spend detected: UTXO ${input.txId} (outputIndex: ${input.outputIndex}) already spent by transaction ${mempoolTxId}`
             );
           }
         }

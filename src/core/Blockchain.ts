@@ -231,7 +231,11 @@ export class Blockchain {
       );
     }
 
-    console.log(chalk.green(`✅ Block ${block.index} added to chain and saved to database`));
+    console.log(
+      chalk.green(
+        `✅ Block ${block.index} added to chain and saved to database`
+      )
+    );
 
     return true;
   }
@@ -387,7 +391,7 @@ export class Blockchain {
       )
     );
 
-    console.log(`💳 Transactions:`)
+    console.log(`💳 Transactions:`);
     // Log a concise, one-line summary for each transaction included in the block
     for (let i = 0; i < blockTransactions.length; i++) {
       const tx = blockTransactions[i];
@@ -418,11 +422,7 @@ export class Blockchain {
     }
 
     // Mine the block
-    const progressReporter = this.proofOfWork.createProgressReporter();
-    const minedBlock = await this.proofOfWork.mineBlock(
-      candidateBlock,
-      progressReporter
-    );
+    const minedBlock = await this.proofOfWork.mineBlock(candidateBlock);
 
     if (minedBlock) {
       // Add the mined block to the chain

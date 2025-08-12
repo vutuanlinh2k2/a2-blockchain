@@ -215,7 +215,7 @@ export function createDemoDoubleSpendPreventionCommand(): Command {
         // 2) Run the built-in demonstration which constructs two conflicting txs
         console.log(
           chalk.red(
-            "\n🔍 Creating a transaction and a conflicting double-spend..."
+            "\n🔍 Creating 2 transactions, one is a valid transaction and the other is a conflicting double-spend..."
           )
         );
         const result = bc.demonstrateDoubleSpendPrevention({ quiet: true });
@@ -317,7 +317,7 @@ export function createDemoDifficultyAdjustmentCommand(): Command {
         );
         if (firstAdjustedUpBlock.difficulty > lastFastBlock.difficulty) {
           console.log(
-            chalk.green("   ✅ SUCCESS: Difficulty correctly increased.")
+            chalk.green("✅ SUCCESS: Difficulty correctly increased.")
           );
         } else {
           console.log(
@@ -367,7 +367,7 @@ export function createDemoDifficultyAdjustmentCommand(): Command {
 
         if (firstAdjustedDownBlock.difficulty < lastSlowBlock.difficulty) {
           console.log(
-            chalk.green("   ✅ SUCCESS: Difficulty correctly decreased.")
+            chalk.green("✅ SUCCESS: Difficulty correctly decreased.")
           );
         } else {
           console.log(

@@ -48,13 +48,9 @@ export class ProofOfWork {
   /**
    * Mines a block by finding a nonce that produces a hash meeting the difficulty requirement.
    * @param block - The candidate block to mine
-   * @param onProgress - Optional callback for progress updates
    * @returns The mined block with valid proof-of-work, or null if mining was stopped
    */
-  public async mineBlock(
-    block: Block,
-    onProgress?: (stats: Partial<MiningStats>) => boolean
-  ): Promise<Block | null> {
+  public async mineBlock(block: Block): Promise<Block | null> {
     return new Promise((resolve) => {
       const stats: MiningStats = {
         startTime: Date.now(),
@@ -107,16 +103,6 @@ export class ProofOfWork {
         if (now - lastProgressUpdate >= progressInterval) {
           const elapsed = now - stats.startTime;
           stats.hashRate = this.calculateHashRate(stats.attempts, elapsed);
-
-          // Call progress callback if provided
-          if (onProgress) {
-            const shouldContinue = onProgress(stats);
-            if (!shouldContinue) {
-              console.log("🛑 Mining stopped by user");
-              resolve(null);
-              return;
-            }
-          }
 
           lastProgressUpdate = now;
 
@@ -259,42 +245,6 @@ export class ProofOfWork {
     // Expected number of attempts = 2^(4 * difficulty) for hexadecimal
     const expectedAttempts = Math.pow(16, difficulty);
     return expectedAttempts / hashRate;
-  }
-
-  /**
-   * Creates a mining progress reporter that logs mining statistics.
-   * @param logInterval - How often to log progress (in attempts)
-   * @returns Progress callback function
-   */
-  public createProgressReporter(
-    logInterval: number = 50000
-  ): (stats: Partial<MiningStats>) => boolean {
-    let lastLoggedAttempts = 0;
-
-    return (stats: Partial<MiningStats>) => {
-      if (!stats.attempts) return true;
-
-      // Log progress at specified intervals
-      if (stats.attempts - lastLoggedAttempts >= logInterval) {
-        const elapsed = Date.now() - (stats.startTime || 0);
-        const timeStr = (elapsed / 1000).toFixed(1);
-        const hashRateStr = this.formatHashRate(stats.hashRate || 0);
-        const eta = this.estimateMiningTime(
-          stats.difficulty || 1,
-          stats.hashRate || 1
-        );
-        const etaStr = eta === Infinity ? "∞" : `${eta.toFixed(1)}s`;
-
-        console.log(
-          `   📈 ${stats.attempts.toLocaleString()} attempts, ` +
-            `${hashRateStr}, ${timeStr}s elapsed, ETA: ${etaStr}`
-        );
-
-        lastLoggedAttempts = stats.attempts;
-      }
-
-      return true; // Continue mining
-    };
   }
 
   /**
