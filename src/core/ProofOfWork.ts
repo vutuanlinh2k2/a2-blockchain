@@ -1,5 +1,4 @@
 import { Block } from "./Block";
-import { Transaction } from "./Transaction";
 
 /**
  * Mining statistics for tracking performance and progress.

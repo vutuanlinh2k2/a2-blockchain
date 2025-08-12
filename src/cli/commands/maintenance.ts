@@ -14,9 +14,6 @@ export function createSeedBlockchainDataCommand(): Command {
       try {
         // Check if database has more than just the genesis block (block count > 1)
         const { BlockchainDB } = require("../../storage/Database");
-        const {
-          BlockchainStorage,
-        } = require("../../storage/BlockchainStorage");
 
         const tempDb = new BlockchainDB(DEFAULT_CORE_DB_PATH);
         const blockCount = tempDb
