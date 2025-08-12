@@ -53,7 +53,12 @@ export function createDemoImmutabilityCommand(): Command {
         const b4 = await bc.mineBlock(miner); // Block 4
         if (!b4) throw new Error("Failed to mine block 4 during seeding");
 
-        console.log(chalk.green("✅ Blockchain seeded with 5 blocks."));
+        const tx4 = bc.createTransaction(carol, miner, 1);
+        if (tx4) bc.addTransaction(tx4);
+        const b5 = await bc.mineBlock(miner); // Block 5
+        if (!b5) throw new Error("Failed to mine block 5 during seeding");
+
+        console.log(chalk.green("✅ Blockchain seeded with 6 blocks."));
 
         // 2. Show original valid state
         const originalChain = bc.getChain();
@@ -106,10 +111,14 @@ export function createDemoImmutabilityCommand(): Command {
         console.log(chalk.blue("\n🔎 Analysis of the broken chain:"));
 
         const currentChain = bc.getChain();
+        let previousBlockActualHash = currentChain[0].hash;
+        let isChainBroken = false;
+
         for (let i = 1; i < currentChain.length; i++) {
           const blockData = currentChain[i];
-          const prevBlockData = currentChain[i - 1];
+          const originalBlockData = originalChain[i]; // Get original data from pre-tamper chain
 
+          // Re-instantiate a block object from the data to get its true hash.
           const block = new Block(
             blockData.index,
             blockData.transactions.map((tx: any) =>
@@ -122,46 +131,64 @@ export function createDemoImmutabilityCommand(): Command {
             blockData.difficulty,
             blockData.timestamp
           );
-          const prevBlock = new Block(
-            prevBlockData.index,
-            prevBlockData.transactions.map((tx: any) =>
-              tx instanceof Transaction
-                ? tx
-                : new Transaction(tx.inputs, tx.outputs, tx.timestamp)
-            ),
-            prevBlockData.previousHash,
-            prevBlockData.nonce,
-            prevBlockData.difficulty,
-            prevBlockData.timestamp
-          );
-
-          const newHash = block.calculateHash();
-          const isHashValid = newHash === block.hash;
-          const isLinkValid = block.previousHash === prevBlock.hash;
+          const currentBlockActualHash = block.hash;
 
           if (i === blockToTamperIndex) {
             console.log(
-              chalk.red(`   - Block #${block.index} (TAMPERED): INVALID HASH`)
-            );
-            console.log(`     Stored Hash:     ${block.hash}`);
-            console.log(`     Recalculated Hash: ${newHash}`);
-            console.log(
-              "     Reason: Data was changed, so the new hash doesn't match the stored one."
-            );
-          } else if (i > blockToTamperIndex) {
-            console.log(chalk.red(`   - Block #${block.index}: INVALID LINK`));
-            console.log(`     Previous Hash Pointer: ${block.previousHash}`);
-            console.log(
-              `     Actual Hash of Block #${prevBlock.index}:   ${prevBlock.hash}`
+              chalk.red(
+                `   - Block #${block.index} (TAMPERED): Data was changed, invalidating the block's hash.`
+              )
             );
             console.log(
-              "     Reason: The hash of the preceding block changed, breaking the cryptographic link."
+              `     Original Hash:      ${originalBlockData.hash.substring(
+                0,
+                12
+              )}...`
             );
+            console.log(
+              `     New Recalculated Hash: ${currentBlockActualHash.substring(
+                0,
+                12
+              )}... (DOES NOT MATCH)`
+            );
+          } else if (isChainBroken) {
+            console.log(
+              chalk.red(
+                `   - Block #${block.index}: INVALID because it follows a broken section of the chain.`
+              )
+            );
+          } else if (block.previousHash !== previousBlockActualHash) {
+            // This condition is met for the block immediately following the tampered one.
+            console.log(
+              chalk.red(
+                `   - Block #${block.index}: INVALID due to a broken cryptographic link.`
+              )
+            );
+            console.log(
+              `     This block points to the previous hash: ${block.previousHash.substring(
+                0,
+                12
+              )}...`
+            );
+            console.log(
+              `     But the actual hash of the tampered block (#${
+                i - 1
+              }) is now:  ${previousBlockActualHash.substring(
+                0,
+                12
+              )}... (MISMATCH)`
+            );
+            isChainBroken = true;
           } else {
             console.log(
-              chalk.green(`   - Block #${block.index}: Still valid.`)
+              chalk.green(
+                `   - Block #${block.index}: Still valid. Link is intact.`
+              )
             );
           }
+
+          // Update the actual hash for the next iteration.
+          previousBlockActualHash = currentBlockActualHash;
         }
         console.log(
           chalk.magenta(
