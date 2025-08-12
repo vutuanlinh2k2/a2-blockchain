@@ -69,211 +69,380 @@ export class Blockchain {
   }
 
   /**
-   * Adds a new block to the chain after validation.
-   * @param block - The block to add
-   * @returns True if the block was added successfully
+   * Loads the blockchain from the database or creates a new one with a genesis block.
    */
-  public addBlock(block: Block): boolean {
-    // Validate the block structure
-    if (!block.isValid()) {
-      console.log(`❌ Block ${block.index} failed structure validation`);
-      return false;
-    }
-
-    // Validate proof-of-work
-    if (!this.proofOfWork.validateProofOfWork(block)) {
-      console.log(`❌ Block ${block.index} failed proof-of-work validation`);
-      return false;
-    }
-
-    // Validate that it follows the previous block
-    const previousBlock = this.getLatestBlock();
-    if (!block.isValidSuccessor(previousBlock)) {
-      console.log(`❌ Block ${block.index} is not a valid successor`);
-      return false;
-    }
-
-    // Validate chronological ordering
-    if (!this.validateChronologicalOrder(block)) {
-      console.log(`❌ Block ${block.index} violates chronological ordering`);
-      return false;
-    }
-
-    // Validate all transactions in the block
-    if (!this.validateBlockTransactions(block)) {
-      console.log(`❌ Block ${block.index} contains invalid transactions`);
-      return false;
-    }
-
-    // Add the block to the chain
-    this.blocks.push(block);
-
-    // Save block to database
+  private loadOrInitializeChain(): void {
     if (this.storage) {
-      if (!this.storage.saveBlock(block)) {
-        // Rollback if database save fails
-        this.blocks.pop();
-        console.log(
-          `❌ Failed to save block ${block.index} to database, rolling back`
-        );
-        return false;
+      const loadedBlocks = this.storage.loadBlocks();
+
+      if (loadedBlocks.length > 0) {
+        this.blocks = loadedBlocks;
+        this.reconstructUTXOSetFromDatabase();
+
+        // Load configuration from database if it exists, otherwise save current config
+        this.loadOrSaveConfig();
+
+        if (!this.validateChain()) {
+          console.error("❌ Loaded blockchain is invalid! Starting fresh.");
+          this.blocks = [];
+          this.utxoSet.clear();
+          this.createGenesisBlock();
+        } else {
+          this.storage.saveChainState("chain_tip", this.getLatestBlock().hash);
+          this.storage.saveChainState(
+            "chain_length",
+            this.blocks.length.toString()
+          );
+          console.log(
+            chalk.green(
+              `✅ Blockchain loaded from database with ${this.blocks.length} blocks.`
+            )
+          );
+        }
+      } else {
+        this.createGenesisBlock();
+        // Save the configuration when creating a new blockchain
+        this.saveConfig();
       }
+    } else {
+      this.createGenesisBlock();
     }
+  }
 
-    // Update UTXO set
-    this.updateUTXOSet(block);
+  /**
+   * Loads configuration from database, or saves current config if none exists.
+   */
+  private loadOrSaveConfig(): void {
+    if (!this.storage) return;
 
-    // Remove included transactions from the pool
-    this.removeTransactionsFromPool(block);
+    const savedBlockReward = this.storage.loadChainState("block_reward");
+    const savedDifficulty = this.storage.loadChainState("initial_difficulty");
+    const savedGenesisMessage = this.storage.loadChainState("genesis_message");
 
-    // Update chain state in database
-    if (this.storage) {
-      this.storage.saveChainState("chain_tip", block.hash);
+    if (savedBlockReward && savedDifficulty) {
+      // Update config with saved values (cast as any to modify readonly)
+      (this.config as any).blockReward = parseFloat(savedBlockReward);
+      (this.config as any).initialDifficulty = parseInt(savedDifficulty);
+      if (savedGenesisMessage) {
+        (this.config as any).genesisMessage = savedGenesisMessage;
+      }
+    } else {
+      // Save current config to database
+      this.saveConfig();
+    }
+  }
+
+  /**
+   * Saves the current configuration to the database.
+   */
+  private saveConfig(): void {
+    if (!this.storage) return;
+
+    this.storage.saveChainState(
+      "block_reward",
+      this.config.blockReward.toString()
+    );
+    this.storage.saveChainState(
+      "initial_difficulty",
+      this.config.initialDifficulty.toString()
+    );
+    if (this.config.genesisMessage) {
       this.storage.saveChainState(
-        "chain_length",
-        this.blocks.length.toString()
+        "genesis_message",
+        this.config.genesisMessage
       );
     }
+  }
 
-    console.log(
-      chalk.green(
-        `✅ Block ${block.index} added to chain and saved to database`
-      )
-    );
+  /**
+   * Restores the in-memory mempool from persisted database entries.
+   */
+  private restoreMempoolFromStorage(): void {
+    if (!this.storage) return;
+    try {
+      const rows = this.storage.loadMempoolTransactions();
+      if (!rows || rows.length === 0) return;
+
+      for (const row of rows) {
+        try {
+          const tx = Transaction.deserialize(row.serialized);
+          const validation = this.transactionValidator.validateTransaction(tx);
+          if (validation.isValid) {
+            this.transactionPool.addTransaction(tx);
+            this.transactionValidator.addToMempool(tx);
+          } else {
+            // Drop invalid/stale entry
+            this.storage.deleteMempoolTransaction(row.id);
+          }
+        } catch (e) {
+          this.storage.deleteMempoolTransaction(row.id);
+        }
+      }
+    } catch {}
+  }
+
+  /**
+   * Creates and saves the genesis block.
+   */
+  private createGenesisBlock(): void {
+    const genesisBlock = Block.createGenesis(this.config.genesisMessage);
+    this.blocks.push(genesisBlock);
+    this.updateUTXOSet(genesisBlock);
+
+    // Save genesis block to database
+    if (this.storage) {
+      this.storage.saveBlock(genesisBlock);
+      this.storage.saveChainState("chain_tip", genesisBlock.hash);
+      this.storage.saveChainState("chain_length", "1");
+      this.storage.saveChainState("genesis_hash", genesisBlock.hash);
+    }
+
+    console.log("🎉 Genesis block created and saved");
+    console.log(`   Hash: ${genesisBlock.hash}`);
+  }
+
+  /**
+   * Reconstructs the UTXO set from the database.
+   */
+  private reconstructUTXOSetFromDatabase(): void {
+    if (!this.storage) return;
+    this.utxoSet.clear();
+    const loadedUTXOs = this.storage.loadUTXOs();
+
+    for (const utxo of loadedUTXOs) {
+      this.utxoSet.addUTXO(utxo);
+    }
+  }
+
+  /**
+   * Validates that a block maintains chronological ordering.
+   * @param block - The block to validate
+   * @returns True if chronological ordering is maintained
+   */
+  private validateChronologicalOrder(block: Block): boolean {
+    const previousBlock = this.getLatestBlock();
+
+    // Check timestamp is after previous block
+    if (block.timestamp <= previousBlock.timestamp) {
+      console.log(
+        `❌ Block timestamp ${block.timestamp} not after previous ${previousBlock.timestamp}`
+      );
+      return false;
+    }
+
+    // Check timestamp is not too far in the future (max 2 hours)
+    const maxFutureTime = Date.now() + 2 * 60 * 60 * 1000;
+    if (block.timestamp > maxFutureTime) {
+      console.log(`❌ Block timestamp ${block.timestamp} too far in future`);
+      return false;
+    }
+
+    // Check sequential block index
+    if (block.index !== previousBlock.index + 1) {
+      console.log(
+        `❌ Block index ${block.index} not sequential after ${previousBlock.index}`
+      );
+      return false;
+    }
 
     return true;
   }
 
   /**
-   * Mines a new block with pending transactions.
-   * @param minerAddress - Address to receive the mining reward
-   * @returns The mined block, or null if mining failed
+   * Validates all transactions in a block.
+   * @param block - The block to validate
+   * @returns True if all transactions are valid
    */
-  public async mineBlock(
-    minerAddress: string,
-    overrideTimestamp?: number
-  ): Promise<Block | null> {
-    // Create coinbase transaction (mining reward)
-    const coinbaseTransaction = Transaction.createCoinbase(
-      minerAddress,
-      this.config.blockReward
-    );
-
-    // Select transactions from the pool
-    const pendingTransactions =
-      this.transactionPool.selectTransactionsForBlock(10);
-
-    // Include coinbase transaction at the beginning
-    const blockTransactions = [coinbaseTransaction, ...pendingTransactions];
-
-    // Calculate next difficulty
-    const currentDifficulty = this.calculateNextDifficulty();
-
-    // Create candidate block with a timestamp strictly greater than the previous block
-    const previousBlock = this.getLatestBlock();
-    const candidateTimestamp =
-      overrideTimestamp ?? Math.max(Date.now(), previousBlock.timestamp + 1);
-    const candidateBlock = new Block(
-      previousBlock.index + 1,
-      blockTransactions,
-      previousBlock.hash,
-      0,
-      currentDifficulty,
-      candidateTimestamp
-    );
-
-    console.log(
-      chalk.blue(
-        `\n📦 Mining block #${candidateBlock.index} with ${blockTransactions.length} transactions`
-      )
-    );
-
-    console.log(`💳 Transactions:`);
-    // Log a concise, one-line summary for each transaction included in the block
-    for (let i = 0; i < blockTransactions.length; i++) {
-      const tx = blockTransactions[i];
-      const isCoinbase = tx.inputs.length === 0;
-      const totalAmount = tx.getTotalOutputAmount();
-
-      // Derive sender addresses from referenced UTXOs (if not coinbase)
-      let fromAddresses = "coinbase";
-      if (!isCoinbase) {
-        const allUTXOs = this.utxoSet.getAllUTXOs();
-        const froms = tx.inputs.map((input) => {
-          const utxo = allUTXOs.find(
-            (u) => u.txId === input.txId && u.outputIndex === input.outputIndex
-          );
-          return utxo ? utxo.address : "unknown";
-        });
-        const uniqueFroms = Array.from(new Set(froms));
-        fromAddresses = uniqueFroms.join("+") || "unknown";
+  private validateBlockTransactions(block: Block): boolean {
+    for (const transaction of block.transactions) {
+      // Validate transaction structure
+      if (!transaction.isValid()) {
+        console.log(`❌ Invalid transaction structure: ${transaction.id}`);
+        return false;
       }
 
-      // Recipient addresses and amounts
-      const toField = tx.outputs.map((o) => `${o.address}`);
-
-      const txType = isCoinbase ? "coinbase" : "payment";
-      console.log(
-        `   [${i}] from=${fromAddresses}, to=${toField}, amount=${totalAmount}, type=${txType}`
-      );
-    }
-
-    // Mine the block
-    const minedBlock = await this.proofOfWork.mineBlock(candidateBlock);
-
-    if (minedBlock) {
-      // Add the mined block to the chain
-      if (this.addBlock(minedBlock)) {
-        return minedBlock;
+      // Check that transaction inputs reference valid UTXOs
+      if (!this.utxoSet.canSpendTransaction(transaction)) {
+        console.log(
+          `❌ Transaction references invalid UTXOs: ${transaction.id}`
+        );
+        return false;
       }
     }
 
-    return null;
+    return true;
   }
 
   /**
-   * Adds a transaction to the transaction pool with comprehensive validation.
-   * @param transaction - The transaction to add
-   * @returns ValidationResult with detailed feedback
+   * Updates the UTXO set based on a new block.
+   * @param block - The block to process
    */
-  public addTransaction(transaction: Transaction): ValidationResult {
-    console.log(`🔍 Validating transaction: ${transaction.id}`);
-
-    // Comprehensive validation including double-spend checks
-    const validationResult =
-      this.transactionValidator.validateTransaction(transaction);
-
-    if (validationResult.isValid) {
-      // Add to transaction pool
-      const added = this.transactionPool.addTransaction(transaction);
-      if (added) {
-        // Add to validator's mempool for conflict detection
-        this.transactionValidator.addToMempool(transaction);
-        console.log(`✅ Transaction added to pool: ${transaction.id}`);
-
-        // Persist to mempool storage so it survives CLI process exits
+  private updateUTXOSet(block: Block): void {
+    for (const transaction of block.transactions) {
+      // Spend UTXOs referenced by inputs
+      for (const input of transaction.inputs) {
+        this.utxoSet.spendUTXO(input.txId, input.outputIndex, transaction.id);
+        // Also mark as spent in database
         if (this.storage) {
-          this.storage.saveMempoolTransaction(
-            transaction.id,
-            transaction.timestamp,
-            transaction.serialize()
+          this.storage.markUTXOSpent(
+            input.txId,
+            input.outputIndex,
+            transaction.id
           );
         }
-
-        // Log any warnings
-        if (validationResult.warnings.length > 0) {
-          console.log(`⚠️  Warnings: ${validationResult.warnings.join(", ")}`);
-        }
-      } else {
-        validationResult.isValid = false;
-        validationResult.errors.push("Failed to add transaction to pool");
       }
-    } else {
-      console.log(`❌ Transaction rejected: ${transaction.id}`);
-      console.log(`   Errors: ${validationResult.errors.join(", ")}`);
+
+      // Add new UTXOs from outputs
+      transaction.outputs.forEach((output, index) => {
+        const utxo = new UTXO(
+          transaction.id,
+          index,
+          output.address,
+          output.amount,
+          false
+        );
+        this.utxoSet.addUTXO(utxo);
+      });
+    }
+  }
+
+  /**
+   * Removes transactions from the pool that are included in a block.
+   * @param block - The block containing transactions to remove
+   */
+  private removeTransactionsFromPool(block: Block): void {
+    for (const transaction of block.transactions) {
+      this.transactionPool.removeTransaction(transaction.id);
+      this.transactionValidator.removeFromMempool(transaction.id);
+      // Also remove from persisted mempool store
+      if (this.storage) {
+        this.storage.deleteMempoolTransaction(transaction.id);
+      }
+    }
+  }
+
+  /**
+   * Calculates the difficulty for the next block.
+   * @returns The appropriate difficulty level
+   */
+  private calculateNextDifficulty(): number {
+    const latestBlock = this.getLatestBlock();
+
+    // For the block right after genesis, use the configured initial difficulty.
+    if (latestBlock.index === 0) {
+      return this.config.initialDifficulty;
     }
 
-    return validationResult;
+    // For all other blocks, use the dynamic adjustment logic.
+    const currentDifficulty = latestBlock.difficulty;
+    return this.proofOfWork.calculateNextDifficulty(
+      this.blocks,
+      currentDifficulty
+    );
+  }
+
+  /**
+   * Validates an alternative blockchain without modifying the current state.
+   * @param chain - The chain to validate
+   * @returns True if the chain is valid
+   */
+  private validateAlternativeChain(chain: Block[]): boolean {
+    if (chain.length === 0) {
+      return false;
+    }
+
+    // Validate genesis block matches
+    if (chain[0].hash !== this.blocks[0].hash) {
+      console.log("   ❌ Genesis block mismatch");
+      return false;
+    }
+
+    // Validate each block in the chain
+    for (let i = 1; i < chain.length; i++) {
+      const currentBlock = chain[i];
+      const previousBlock = chain[i - 1];
+
+      // Validate block structure
+      if (!currentBlock.isValid()) {
+        console.log(`   ❌ Invalid block structure at index ${i}`);
+        return false;
+      }
+
+      // Validate proof-of-work
+      if (!this.proofOfWork.validateProofOfWork(currentBlock)) {
+        console.log(`   ❌ Invalid proof-of-work at index ${i}`);
+        return false;
+      }
+
+      // Validate chain linkage
+      if (!currentBlock.isValidSuccessor(previousBlock)) {
+        console.log(`   ❌ Broken chain linkage at index ${i}`);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Finds the fork point between the current chain and an alternative chain.
+   * @param alternativeChain - The alternative chain to compare
+   * @returns The index of the last common block
+   */
+  private findForkPoint(alternativeChain: Block[]): number {
+    const minLength = Math.min(this.blocks.length, alternativeChain.length);
+
+    for (let i = 0; i < minLength; i++) {
+      if (this.blocks[i].hash !== alternativeChain[i].hash) {
+        return i - 1; // Return the last common block
+      }
+    }
+
+    return minLength - 1;
+  }
+
+  /**
+   * Rolls back the chain to a specific block index.
+   * @param blockIndex - The index to roll back to
+   */
+  private rollbackToBlock(blockIndex: number): void {
+    if (blockIndex < 0 || blockIndex >= this.blocks.length) {
+      throw new Error(`Invalid rollback index: ${blockIndex}`);
+    }
+
+    console.log(
+      `   ⏪ Rolling back from block ${this.blocks.length - 1} to ${blockIndex}`
+    );
+
+    // Remove blocks after the rollback point
+    this.blocks = this.blocks.slice(0, blockIndex + 1);
+
+    // Rebuild UTXO set from the remaining chain
+    this.rebuildUTXOSet();
+  }
+
+  /**
+   * Rebuilds the UTXO set from the current blockchain state.
+   */
+  private rebuildUTXOSet(): void {
+    console.log("   🔄 Rebuilding UTXO set...");
+
+    this.utxoSet.clear();
+
+    // Process each block to rebuild UTXO set
+    for (const block of this.blocks) {
+      this.updateUTXOSet(block);
+    }
+
+    console.log(`   ✅ UTXO set rebuilt: ${this.utxoSet.size()} UTXOs`);
+  }
+
+  /**
+   * Gets the blockchain configuration.
+   * @returns The blockchain configuration
+   */
+  public getConfig(): BlockchainConfig {
+    return { ...this.config }; // Return a copy to prevent external modification
   }
 
   /**
@@ -740,6 +909,214 @@ export class Blockchain {
   }
 
   /**
+   * Adds a new block to the chain after validation.
+   * @param block - The block to add
+   * @returns True if the block was added successfully
+   */
+  public addBlock(block: Block): boolean {
+    // Validate the block structure
+    if (!block.isValid()) {
+      console.log(`❌ Block ${block.index} failed structure validation`);
+      return false;
+    }
+
+    // Validate proof-of-work
+    if (!this.proofOfWork.validateProofOfWork(block)) {
+      console.log(`❌ Block ${block.index} failed proof-of-work validation`);
+      return false;
+    }
+
+    // Validate that it follows the previous block
+    const previousBlock = this.getLatestBlock();
+    if (!block.isValidSuccessor(previousBlock)) {
+      console.log(`❌ Block ${block.index} is not a valid successor`);
+      return false;
+    }
+
+    // Validate chronological ordering
+    if (!this.validateChronologicalOrder(block)) {
+      console.log(`❌ Block ${block.index} violates chronological ordering`);
+      return false;
+    }
+
+    // Validate all transactions in the block
+    if (!this.validateBlockTransactions(block)) {
+      console.log(`❌ Block ${block.index} contains invalid transactions`);
+      return false;
+    }
+
+    // Add the block to the chain
+    this.blocks.push(block);
+
+    // Save block to database
+    if (this.storage) {
+      if (!this.storage.saveBlock(block)) {
+        // Rollback if database save fails
+        this.blocks.pop();
+        console.log(
+          `❌ Failed to save block ${block.index} to database, rolling back`
+        );
+        return false;
+      }
+    }
+
+    // Update UTXO set
+    this.updateUTXOSet(block);
+
+    // Remove included transactions from the pool
+    this.removeTransactionsFromPool(block);
+
+    // Update chain state in database
+    if (this.storage) {
+      this.storage.saveChainState("chain_tip", block.hash);
+      this.storage.saveChainState(
+        "chain_length",
+        this.blocks.length.toString()
+      );
+    }
+
+    console.log(
+      chalk.green(
+        `✅ Block ${block.index} added to chain and saved to database`
+      )
+    );
+
+    return true;
+  }
+
+  /**
+   * Mines a new block with pending transactions.
+   * @param minerAddress - Address to receive the mining reward
+   * @returns The mined block, or null if mining failed
+   */
+  public async mineBlock(
+    minerAddress: string,
+    overrideTimestamp?: number
+  ): Promise<Block | null> {
+    // Create coinbase transaction (mining reward)
+    const coinbaseTransaction = Transaction.createCoinbase(
+      minerAddress,
+      this.config.blockReward
+    );
+
+    // Select transactions from the pool
+    const pendingTransactions =
+      this.transactionPool.selectTransactionsForBlock(10);
+
+    // Include coinbase transaction at the beginning
+    const blockTransactions = [coinbaseTransaction, ...pendingTransactions];
+
+    // Calculate next difficulty
+    const currentDifficulty = this.calculateNextDifficulty();
+
+    // Create candidate block with a timestamp strictly greater than the previous block
+    const previousBlock = this.getLatestBlock();
+    const candidateTimestamp =
+      overrideTimestamp ?? Math.max(Date.now(), previousBlock.timestamp + 1);
+    const candidateBlock = new Block(
+      previousBlock.index + 1,
+      blockTransactions,
+      previousBlock.hash,
+      0,
+      currentDifficulty,
+      candidateTimestamp
+    );
+
+    console.log(
+      chalk.blue(
+        `\n📦 Mining block #${candidateBlock.index} with ${blockTransactions.length} transactions`
+      )
+    );
+
+    console.log(`💳 Transactions:`);
+    // Log a concise, one-line summary for each transaction included in the block
+    for (let i = 0; i < blockTransactions.length; i++) {
+      const tx = blockTransactions[i];
+      const isCoinbase = tx.inputs.length === 0;
+      const totalAmount = tx.getTotalOutputAmount();
+
+      // Derive sender addresses from referenced UTXOs (if not coinbase)
+      let fromAddresses = "coinbase";
+      if (!isCoinbase) {
+        const allUTXOs = this.utxoSet.getAllUTXOs();
+        const froms = tx.inputs.map((input) => {
+          const utxo = allUTXOs.find(
+            (u) => u.txId === input.txId && u.outputIndex === input.outputIndex
+          );
+          return utxo ? utxo.address : "unknown";
+        });
+        const uniqueFroms = Array.from(new Set(froms));
+        fromAddresses = uniqueFroms.join("+") || "unknown";
+      }
+
+      // Recipient addresses and amounts
+      const toField = tx.outputs.map((o) => `${o.address}`);
+
+      const txType = isCoinbase ? "coinbase" : "payment";
+      console.log(
+        `   [${i}] from=${fromAddresses}, to=${toField}, amount=${totalAmount}, type=${txType}`
+      );
+    }
+
+    // Mine the block
+    const minedBlock = await this.proofOfWork.mineBlock(candidateBlock);
+
+    if (minedBlock) {
+      // Add the mined block to the chain
+      if (this.addBlock(minedBlock)) {
+        return minedBlock;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Adds a transaction to the transaction pool with comprehensive validation.
+   * @param transaction - The transaction to add
+   * @returns ValidationResult with detailed feedback
+   */
+  public addTransaction(transaction: Transaction): ValidationResult {
+    console.log(`🔍 Validating transaction: ${transaction.id}`);
+
+    // Comprehensive validation including double-spend checks
+    const validationResult =
+      this.transactionValidator.validateTransaction(transaction);
+
+    if (validationResult.isValid) {
+      // Add to transaction pool
+      const added = this.transactionPool.addTransaction(transaction);
+      if (added) {
+        // Add to validator's mempool for conflict detection
+        this.transactionValidator.addToMempool(transaction);
+        console.log(`✅ Transaction added to pool: ${transaction.id}`);
+
+        // Persist to mempool storage so it survives CLI process exits
+        if (this.storage) {
+          this.storage.saveMempoolTransaction(
+            transaction.id,
+            transaction.timestamp,
+            transaction.serialize()
+          );
+        }
+
+        // Log any warnings
+        if (validationResult.warnings.length > 0) {
+          console.log(`⚠️  Warnings: ${validationResult.warnings.join(", ")}`);
+        }
+      } else {
+        validationResult.isValid = false;
+        validationResult.errors.push("Failed to add transaction to pool");
+      }
+    } else {
+      console.log(`❌ Transaction rejected: ${transaction.id}`);
+      console.log(`   Errors: ${validationResult.errors.join(", ")}`);
+    }
+
+    return validationResult;
+  }
+
+  /**
    * Gets the blockchain storage instance for direct access.
    * @returns The blockchain storage instance
    */
@@ -757,325 +1134,6 @@ export class Blockchain {
     if (this.db) {
       this.db.close();
     }
-  }
-
-  /**
-   * Loads the blockchain from the database or creates a new one with a genesis block.
-   */
-  private loadOrInitializeChain(): void {
-    if (this.storage) {
-      const loadedBlocks = this.storage.loadBlocks();
-
-      if (loadedBlocks.length > 0) {
-        this.blocks = loadedBlocks;
-        this.reconstructUTXOSetFromDatabase();
-
-        if (!this.validateChain()) {
-          console.error("❌ Loaded blockchain is invalid! Starting fresh.");
-          this.blocks = [];
-          this.utxoSet.clear();
-          this.createGenesisBlock();
-        } else {
-          this.storage.saveChainState("chain_tip", this.getLatestBlock().hash);
-          this.storage.saveChainState(
-            "chain_length",
-            this.blocks.length.toString()
-          );
-          console.log(
-            chalk.green(
-              `✅ Blockchain loaded from database with ${this.blocks.length} blocks.`
-            )
-          );
-        }
-      } else {
-        this.createGenesisBlock();
-      }
-    } else {
-      this.createGenesisBlock();
-    }
-  }
-
-  /**
-   * Restores the in-memory mempool from persisted database entries.
-   */
-  private restoreMempoolFromStorage(): void {
-    if (!this.storage) return;
-    try {
-      const rows = this.storage.loadMempoolTransactions();
-      if (!rows || rows.length === 0) return;
-
-      for (const row of rows) {
-        try {
-          const tx = Transaction.deserialize(row.serialized);
-          const validation = this.transactionValidator.validateTransaction(tx);
-          if (validation.isValid) {
-            this.transactionPool.addTransaction(tx);
-            this.transactionValidator.addToMempool(tx);
-          } else {
-            // Drop invalid/stale entry
-            this.storage.deleteMempoolTransaction(row.id);
-          }
-        } catch (e) {
-          this.storage.deleteMempoolTransaction(row.id);
-        }
-      }
-    } catch {}
-  }
-
-  /**
-   * Creates and saves the genesis block.
-   */
-  private createGenesisBlock(): void {
-    const genesisBlock = Block.createGenesis(this.config.genesisMessage);
-    this.blocks.push(genesisBlock);
-    this.updateUTXOSet(genesisBlock);
-
-    // Save genesis block to database
-    if (this.storage) {
-      this.storage.saveBlock(genesisBlock);
-      this.storage.saveChainState("chain_tip", genesisBlock.hash);
-      this.storage.saveChainState("chain_length", "1");
-      this.storage.saveChainState("genesis_hash", genesisBlock.hash);
-    }
-
-    console.log("🎉 Genesis block created and saved");
-    console.log(`   Hash: ${genesisBlock.hash}`);
-  }
-
-  /**
-   * Reconstructs the UTXO set from the database.
-   */
-  private reconstructUTXOSetFromDatabase(): void {
-    if (!this.storage) return;
-    this.utxoSet.clear();
-    const loadedUTXOs = this.storage.loadUTXOs();
-
-    for (const utxo of loadedUTXOs) {
-      this.utxoSet.addUTXO(utxo);
-    }
-  }
-
-  /**
-   * Validates that a block maintains chronological ordering.
-   * @param block - The block to validate
-   * @returns True if chronological ordering is maintained
-   */
-  private validateChronologicalOrder(block: Block): boolean {
-    const previousBlock = this.getLatestBlock();
-
-    // Check timestamp is after previous block
-    if (block.timestamp <= previousBlock.timestamp) {
-      console.log(
-        `❌ Block timestamp ${block.timestamp} not after previous ${previousBlock.timestamp}`
-      );
-      return false;
-    }
-
-    // Check timestamp is not too far in the future (max 2 hours)
-    const maxFutureTime = Date.now() + 2 * 60 * 60 * 1000;
-    if (block.timestamp > maxFutureTime) {
-      console.log(`❌ Block timestamp ${block.timestamp} too far in future`);
-      return false;
-    }
-
-    // Check sequential block index
-    if (block.index !== previousBlock.index + 1) {
-      console.log(
-        `❌ Block index ${block.index} not sequential after ${previousBlock.index}`
-      );
-      return false;
-    }
-
-    return true;
-  }
-
-  /**
-   * Validates all transactions in a block.
-   * @param block - The block to validate
-   * @returns True if all transactions are valid
-   */
-  private validateBlockTransactions(block: Block): boolean {
-    for (const transaction of block.transactions) {
-      // Validate transaction structure
-      if (!transaction.isValid()) {
-        console.log(`❌ Invalid transaction structure: ${transaction.id}`);
-        return false;
-      }
-
-      // Check that transaction inputs reference valid UTXOs
-      if (!this.utxoSet.canSpendTransaction(transaction)) {
-        console.log(
-          `❌ Transaction references invalid UTXOs: ${transaction.id}`
-        );
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  /**
-   * Updates the UTXO set based on a new block.
-   * @param block - The block to process
-   */
-  private updateUTXOSet(block: Block): void {
-    for (const transaction of block.transactions) {
-      // Spend UTXOs referenced by inputs
-      for (const input of transaction.inputs) {
-        this.utxoSet.spendUTXO(input.txId, input.outputIndex, transaction.id);
-        // Also mark as spent in database
-        if (this.storage) {
-          this.storage.markUTXOSpent(
-            input.txId,
-            input.outputIndex,
-            transaction.id
-          );
-        }
-      }
-
-      // Add new UTXOs from outputs
-      transaction.outputs.forEach((output, index) => {
-        const utxo = new UTXO(
-          transaction.id,
-          index,
-          output.address,
-          output.amount,
-          false
-        );
-        this.utxoSet.addUTXO(utxo);
-      });
-    }
-  }
-
-  /**
-   * Removes transactions from the pool that are included in a block.
-   * @param block - The block containing transactions to remove
-   */
-  private removeTransactionsFromPool(block: Block): void {
-    for (const transaction of block.transactions) {
-      this.transactionPool.removeTransaction(transaction.id);
-      this.transactionValidator.removeFromMempool(transaction.id);
-      // Also remove from persisted mempool store
-      if (this.storage) {
-        this.storage.deleteMempoolTransaction(transaction.id);
-      }
-    }
-  }
-
-  /**
-   * Calculates the difficulty for the next block.
-   * @returns The appropriate difficulty level
-   */
-  private calculateNextDifficulty(): number {
-    const latestBlock = this.getLatestBlock();
-
-    // For the block right after genesis, use the configured initial difficulty.
-    if (latestBlock.index === 0) {
-      return this.config.initialDifficulty;
-    }
-
-    // For all other blocks, use the dynamic adjustment logic.
-    const currentDifficulty = latestBlock.difficulty;
-    return this.proofOfWork.calculateNextDifficulty(
-      this.blocks,
-      currentDifficulty
-    );
-  }
-
-  /**
-   * Validates an alternative blockchain without modifying the current state.
-   * @param chain - The chain to validate
-   * @returns True if the chain is valid
-   */
-  private validateAlternativeChain(chain: Block[]): boolean {
-    if (chain.length === 0) {
-      return false;
-    }
-
-    // Validate genesis block matches
-    if (chain[0].hash !== this.blocks[0].hash) {
-      console.log("   ❌ Genesis block mismatch");
-      return false;
-    }
-
-    // Validate each block in the chain
-    for (let i = 1; i < chain.length; i++) {
-      const currentBlock = chain[i];
-      const previousBlock = chain[i - 1];
-
-      // Validate block structure
-      if (!currentBlock.isValid()) {
-        console.log(`   ❌ Invalid block structure at index ${i}`);
-        return false;
-      }
-
-      // Validate proof-of-work
-      if (!this.proofOfWork.validateProofOfWork(currentBlock)) {
-        console.log(`   ❌ Invalid proof-of-work at index ${i}`);
-        return false;
-      }
-
-      // Validate chain linkage
-      if (!currentBlock.isValidSuccessor(previousBlock)) {
-        console.log(`   ❌ Broken chain linkage at index ${i}`);
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  /**
-   * Finds the fork point between the current chain and an alternative chain.
-   * @param alternativeChain - The alternative chain to compare
-   * @returns The index of the last common block
-   */
-  private findForkPoint(alternativeChain: Block[]): number {
-    const minLength = Math.min(this.blocks.length, alternativeChain.length);
-
-    for (let i = 0; i < minLength; i++) {
-      if (this.blocks[i].hash !== alternativeChain[i].hash) {
-        return i - 1; // Return the last common block
-      }
-    }
-
-    return minLength - 1;
-  }
-
-  /**
-   * Rolls back the chain to a specific block index.
-   * @param blockIndex - The index to roll back to
-   */
-  private rollbackToBlock(blockIndex: number): void {
-    if (blockIndex < 0 || blockIndex >= this.blocks.length) {
-      throw new Error(`Invalid rollback index: ${blockIndex}`);
-    }
-
-    console.log(
-      `   ⏪ Rolling back from block ${this.blocks.length - 1} to ${blockIndex}`
-    );
-
-    // Remove blocks after the rollback point
-    this.blocks = this.blocks.slice(0, blockIndex + 1);
-
-    // Rebuild UTXO set from the remaining chain
-    this.rebuildUTXOSet();
-  }
-
-  /**
-   * Rebuilds the UTXO set from the current blockchain state.
-   */
-  private rebuildUTXOSet(): void {
-    console.log("   🔄 Rebuilding UTXO set...");
-
-    this.utxoSet.clear();
-
-    // Process each block to rebuild UTXO set
-    for (const block of this.blocks) {
-      this.updateUTXOSet(block);
-    }
-
-    console.log(`   ✅ UTXO set rebuilt: ${this.utxoSet.size()} UTXOs`);
   }
 
   /**

@@ -9,37 +9,6 @@ import {
 } from "../utils";
 
 /**
- * Clear database command - Clear all blockchain data
- */
-export function createClearBlockchainDataCommand(): Command {
-  return new Command("clear-chain")
-    .description("Clear all blockchain data from database")
-    .action(() => {
-      try {
-        console.log(
-          chalk.yellow(
-            "⚠️  WARNING: This will permanently delete all blockchain data!"
-          )
-        );
-
-        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
-        const storage = bc.getStorage();
-
-        console.log(chalk.blue("🧹 Clearing database..."));
-
-        storage.clearAllData();
-
-        // Reset global instance to reflect cleared state
-        resetBlockchain();
-
-        console.log(chalk.green("\n✅ Database cleared successfully!"));
-      } catch (error) {
-        handleError("Clear database", error);
-      }
-    });
-}
-
-/**
  * Seed database command - Initialize database with genesis block (if empty)
  */
 export function createSeedBlockchainDataCommand(): Command {
@@ -49,22 +18,25 @@ export function createSeedBlockchainDataCommand(): Command {
     )
     .action(async () => {
       try {
-        // Check if database is empty first, before initializing blockchain
-        // This prevents automatic genesis block creation when not desired
+        // Check if database has more than just the genesis block (block count > 1)
         const { BlockchainDB } = require("../../storage/Database");
         const {
           BlockchainStorage,
         } = require("../../storage/BlockchainStorage");
 
         const tempDb = new BlockchainDB(DEFAULT_CORE_DB_PATH);
-        const tempStorage = new BlockchainStorage(tempDb);
-
-        if (!tempStorage.isDatabaseEmpty()) {
+        const blockCount = tempDb
+          .getInstance()
+          .prepare("SELECT COUNT(*) as count FROM blocks")
+          .get() as any;
+        if (blockCount.count > 1) {
           console.log(
-            chalk.yellow("⚠️  Database is not empty. Seeding skipped.")
+            chalk.yellow(
+              "⚠️  Database already contains more than genesis block. Seeding skipped."
+            )
           );
           console.log(
-            "Use 'clear-blockchain' to clear the database, then rerun 'seed-blockchain'."
+            "Use 'init' to clear the database and initialize a new blockchain, then rerun 'seed-chain'."
           );
           tempDb.close();
           return;
@@ -74,8 +46,12 @@ export function createSeedBlockchainDataCommand(): Command {
 
         console.log(chalk.blue("🌱 Seeding blockchain data..."));
 
-        // Initialize blockchain (creates genesis block at index 0)
-        const bc = initBlockchain(DEFAULT_CORE_DB_PATH);
+        // Get existing blockchain (should already exist from init command)
+        const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
+
+        // Get the block reward to calculate appropriate transaction amounts
+        const config = bc.getConfig();
+        const blockReward = config.blockReward;
 
         // Addresses used in seed data
         const miner1 = "miner1";
@@ -113,22 +89,29 @@ export function createSeedBlockchainDataCommand(): Command {
         await bc.mineBlock(miner1);
         console.log();
 
+        // Calculate dynamic transaction amounts based on block reward
+        const amount1 = Math.floor(blockReward * 0.4); // 40% of block reward for miner1 → alice
+        const amount2 = Math.floor(blockReward * 0.1); // 10% of block reward for alice → bob
+        const amount3 = Math.floor(blockReward * 0.24); // 24% of block reward for miner1 → carol
+        const amount4 = Math.floor(blockReward * 0.06); // 6% of block reward for bob → alice
+        const amount5 = Math.floor(blockReward * 0.08); // 8% of block reward for carol → alice
+
         // Prepare and mine Block #2: distribute to alice
-        addTx("miner1 → alice (20)", miner1, alice, 20);
+        addTx(`miner1 → alice (${amount1})`, miner1, alice, amount1);
         await bc.mineBlock(miner1);
         console.log();
 
         // Prepare and mine Block #3: alice → bob, and further distribute from miner1 → carol
-        addTx("alice → bob (5)", alice, bob, 5);
+        addTx(`alice → bob (${amount2})`, alice, bob, amount2);
         console.log();
-        addTx("miner1 → carol (12)", miner1, carol, 12);
+        addTx(`miner1 → carol (${amount3})`, miner1, carol, amount3);
         await bc.mineBlock(miner1);
         console.log();
 
         // Prepare and mine Block #4: small movements among users
-        addTx("bob → alice (3)", bob, alice, 3);
+        addTx(`bob → alice (${amount4})`, bob, alice, amount4);
         console.log();
-        addTx("carol → alice (4)", carol, alice, 4);
+        addTx(`carol → alice (${amount5})`, carol, alice, amount5);
         await bc.mineBlock(miner1);
         console.log();
 

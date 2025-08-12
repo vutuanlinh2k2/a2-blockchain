@@ -161,6 +161,22 @@ export class BlockchainStorage {
   }
 
   /**
+   * Checks if the database is empty (no blocks exist).
+   * @returns True if the database is empty, false otherwise
+   */
+  public isDatabaseEmpty(): boolean {
+    try {
+      const result = this.db
+        .prepare("SELECT COUNT(*) as count FROM blocks")
+        .get() as any;
+      return result.count === 0;
+    } catch (error) {
+      console.error("❌ Failed to check database state:", error);
+      return true; // Assume empty on error
+    }
+  }
+
+  /**
    * Loads all blocks from the database and reconstructs the blockchain.
    * @returns Array of blocks in chronological order
    */

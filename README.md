@@ -21,9 +21,22 @@ npm install
 
 # Build the project
 npm run build
+```
 
-# Run the CLI
-npm run cli
+### Usage
+
+```bash
+# See all available commands
+npm start -- --help
+
+# 1. Initialize the blockchain (required first step)
+npm start -- init --block-reward 50
+
+# 2. Mine a block to get some coins
+npm start -- mine --address my-miner-address
+
+# 3. Send coins to a friend
+npm start -- tx --from my-miner-address --to my-friend --amount 10
 ```
 
 ## 🏗️ Architecture Overview
@@ -44,9 +57,9 @@ src/
 │   └── BlockchainStorage.ts  # Blockchain state management
 ├── cli/            # Command-line interface
 │   ├── commands/             # CLI command implementations
-│   │   ├── core.ts           # Core commands (mine, tx, balance, etc.)
+│   │   ├── core.ts           # Core commands (init, mine, tx, balance, etc.)
 │   │   ├── demo.ts           # Demonstration commands
-│   │   └── maintenance.ts    # Maintenance commands (clear, seed)
+│   │   └── maintenance.ts    # Maintenance commands (seed)
 │   ├── index.ts              # CLI entry point and command registration
 │   ├── types.ts              # CLI-related types and options
 │   └── utils.ts              # CLI utilities
@@ -55,98 +68,142 @@ src/
 
 ## 🛠️ CLI Commands
 
+All commands are run using `npm start -- <command>`.
+
+### Initialization
+
+```bash
+# Initialize a new blockchain (clears any existing data)
+npm start -- init [options]
+```
+
+_Options:_
+
+- `-m, --genesis-message <message>`: Genesis block message (default: "Genesis Block")
+- `-d, --initial-difficulty <number>`: Initial mining difficulty (default: "2")
+- `-r, --block-reward <number>`: Block reward for mining (default: "50")
+
 ### Core Operations
 
 ```bash
 # Mine a new block
-blockchain mine --address <address>
+npm start -- mine --address <address>
 
 # Create transaction
-blockchain tx --from <address> --to <address> --amount <number>
+npm start -- tx --from <address> --to <address> --amount <number>
 
 # Check balance
-blockchain balance --address <address>
+npm start -- balance --address <address>
 
 # Display blockchain
-blockchain display-chain [--limit <number>]
+npm start -- display-chain [--limit <number>]
 
 # Show pending transactions
-blockchain display-mempool
+npm start -- display-mempool
 ```
 
 ### Maintenance
 
 ```bash
-# Clear all blockchain data
-blockchain clear-chain
-
-# Seed with sample data
-blockchain seed-chain
+# Seed with sample data (works on a fresh or existing chain)
+npm start -- seed-chain
 ```
 
 ### Demonstrations
 
 ```bash
 # Show immutability (tamper detection)
-blockchain demo-immutability
+npm start -- demo-immutability
 
 # Demonstrate double-spend prevention
-blockchain demo-double-spend
+npm start -- demo-double-spend
 
 # Show difficulty adjustment
-blockchain demo-difficulty-adjustment
+npm start -- demo-difficulty-adjustment
 ```
 
 ## 🔍 Example Workflow
 
-The blockchain automatically initializes with a genesis block when you first run any command. Here's the typical workflow:
+Before you can interact with the blockchain, you must first initialize it. This command creates the database and the genesis block.
 
-### 1. Mine Blocks
-
-```bash
-blockchain mine --address "alice-miner"
-```
-
-Mines a new block with pending transactions, adjusting difficulty automatically.
-
-### 2. Create Transactions
+### 1. Initialize the Blockchain
 
 ```bash
-blockchain tx --from "alice-miner" --to "bob-user" --amount 25
+# Create a new blockchain with a custom block reward of 25 and difficulty of 3
+npm start -- init --block-reward 25 --initial-difficulty 3
 ```
 
-Creates a transaction from Alice to Bob for 25 coins.
+This creates a new, clean database for your blockchain.
 
-### 3. View Chain State
+### 2. Mine Blocks
+
+To get coins, you need to mine a block. The reward will be sent to the address you specify.
 
 ```bash
-blockchain display-chain --limit 20
+npm start -- mine --address "alice-miner"
 ```
 
-Displays the complete blockchain with transaction details and hash linkages.
+Alice now has 25 coins (the block reward we set in step 1).
 
-### 4. Check Balances
+### 3. Create Transactions
+
+Let's have Alice send some coins to Bob.
 
 ```bash
-blockchain balance --address "bob-user"
+npm start -- tx --from "alice-miner" --to "bob-user" --amount 10
 ```
 
-Shows Bob's current balance and available UTXOs.
+This creates a transaction from Alice to Bob for 10 coins. The transaction is now in the mempool, waiting to be included in a block.
 
-### 5. View Pending Transactions
+### 4. Mine the Transaction
+
+To confirm the transaction, someone needs to mine a new block.
 
 ```bash
-blockchain display-mempool
+npm start -- mine --address "charlie-miner"
 ```
 
-Shows all pending transactions in the mempool waiting to be mined.
+Mining a new block will include the transaction from step 3. Charlie gets the mining reward, and Alice's transaction to Bob is now permanent.
+
+### 5. View Chain State
+
+```bash
+npm start -- display-chain
+```
+
+Displays the complete blockchain, including the new blocks and transactions.
+
+### 6. Check Balances
+
+```bash
+# Check Bob's balance
+npm start -- balance --address "bob-user"
+
+# Check Alice's balance
+npm start -- balance --address "alice-miner"
+```
+
+This will show that Bob now has 10 coins, and Alice has her remaining balance.
+
+### 7. View Pending Transactions
+
+Let's create another transaction and see it in the mempool.
+
+```bash
+npm start -- tx --from "bob-user" --to "david-user" --amount 5
+
+# View the mempool
+npm start -- display-mempool
+```
+
+This shows the pending transaction from Bob to David in the mempool, waiting to be mined.
 
 ## 🧪 Demonstrations
 
 ### **Immutability Demo**
 
 ```bash
-blockchain demo-immutability
+npm start -- demo-immutability
 ```
 
 Shows how tampering with historical data invalidates the entire chain.
@@ -154,7 +211,7 @@ Shows how tampering with historical data invalidates the entire chain.
 ### **Double-Spend Prevention**
 
 ```bash
-blockchain demo-double-spend
+npm start -- demo-double-spend
 ```
 
 Demonstrates how the system prevents spending the same coins twice.
@@ -162,7 +219,7 @@ Demonstrates how the system prevents spending the same coins twice.
 ### **Difficulty Adjustment**
 
 ```bash
-blockchain demo-difficulty
+npm start -- demo-difficulty
 ```
 
 Illustrates automatic mining difficulty adjustment based on block times.

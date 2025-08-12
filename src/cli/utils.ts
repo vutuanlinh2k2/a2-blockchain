@@ -23,6 +23,20 @@ export function initBlockchain(dbPath?: string): Blockchain {
 }
 
 /**
+ * Initialize blockchain with custom configuration
+ */
+export function initBlockchainWithConfig(
+  config: BlockchainConfig,
+  dbPath?: string
+): Blockchain {
+  if (dbPath) {
+    ensureDataDirectory(dbPath);
+  }
+
+  return new Blockchain(config, dbPath);
+}
+
+/**
  * Get or create blockchain instance
  */
 export function getBlockchain(dbPath?: string): Blockchain {
@@ -30,6 +44,38 @@ export function getBlockchain(dbPath?: string): Blockchain {
     blockchain = initBlockchain(dbPath ?? DEFAULT_CORE_DB_PATH);
   }
   return blockchain;
+}
+
+/**
+ * Try to get blockchain instance, returns result with error handling
+ * This function requires an existing database - it will not auto-create one
+ */
+export function tryGetBlockchain(dbPath?: string): {
+  blockchain?: Blockchain;
+  error?: string;
+} {
+  try {
+    const actualDbPath = dbPath ?? DEFAULT_CORE_DB_PATH;
+
+    // Check if database file exists
+    if (!fs.existsSync(actualDbPath)) {
+      return {
+        error: `No blockchain database found. Use 'init' command to initialize a new blockchain.`,
+      };
+    }
+
+    if (!blockchain) {
+      // Try to load existing blockchain from database only
+      blockchain = initBlockchain(actualDbPath);
+    }
+    return { blockchain };
+  } catch (error) {
+    // Reset blockchain instance on error
+    blockchain = null;
+    return {
+      error: `Failed to load blockchain: ${error instanceof Error ? error.message : error}. Use 'init' command to initialize a new blockchain.`,
+    };
+  }
 }
 
 /**

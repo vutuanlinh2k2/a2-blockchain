@@ -23,3 +23,9 @@ export interface BalanceOptions extends BaseOptions {
 export interface ChainOptions extends BaseOptions {
   limit?: string;
 }
+
+export interface InitOptions extends BaseOptions {
+  genesisMessage?: string;
+  initialDifficulty?: string;
+  blockReward?: string;
+}

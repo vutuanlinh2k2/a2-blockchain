@@ -3,6 +3,7 @@ import chalk from "chalk";
 import { showBanner, closeBlockchain } from "./utils";
 
 import {
+  createInitCommand,
   createMineCommand,
   createTransactionCommand,
   createBalanceCommand,
@@ -10,10 +11,7 @@ import {
   createDisplayMempoolCommand,
 } from "./commands/core";
 
-import {
-  createClearBlockchainDataCommand,
-  createSeedBlockchainDataCommand,
-} from "./commands/maintenance";
+import { createSeedBlockchainDataCommand } from "./commands/maintenance";
 
 import {
   createDemoImmutabilityCommand,
@@ -35,6 +33,7 @@ export function createProgram(): Command {
     );
 
   // Core blockchain commands
+  program.addCommand(createInitCommand());
   program.addCommand(createMineCommand());
   program.addCommand(createTransactionCommand());
   program.addCommand(createBalanceCommand());
@@ -42,7 +41,6 @@ export function createProgram(): Command {
   program.addCommand(createDisplayMempoolCommand());
 
   // Utilities commands
-  program.addCommand(createClearBlockchainDataCommand());
   program.addCommand(createSeedBlockchainDataCommand());
 
   // Demo commands
