@@ -43,6 +43,30 @@ export class MerkleTree {
   }
 
   /**
+   * Gets the root hash of the Merkle tree.
+   * This is the single hash that represents all the data in the tree.
+   * @returns The root hash, or null if the tree is empty
+   */
+  public getRootHash(): string | null {
+    return this.root ? this.root.hash : null;
+  }
+
+  /**
+   * Creates a Merkle tree from an array of transaction IDs.
+   * This is a convenience method specifically for blockchain transactions.
+   * @param transactionIds - Array of transaction IDs
+   * @returns A new MerkleTree instance
+   */
+  public static fromTransactionIds(transactionIds: string[]): MerkleTree {
+    if (transactionIds.length === 0) {
+      // Create a tree with a single empty transaction for empty blocks
+      return new MerkleTree(["0".repeat(64)]); // Empty transaction hash
+    }
+
+    return new MerkleTree(transactionIds);
+  }
+
+  /**
    * Calculates SHA-256 hash of the input data.
    * @param data - The data to hash
    * @returns The hexadecimal hash string
@@ -86,29 +110,5 @@ export class MerkleTree {
 
     // Recursively build the next level
     return this.buildTree(nextLevel);
-  }
-
-  /**
-   * Gets the root hash of the Merkle tree.
-   * This is the single hash that represents all the data in the tree.
-   * @returns The root hash, or null if the tree is empty
-   */
-  public getRootHash(): string | null {
-    return this.root ? this.root.hash : null;
-  }
-
-  /**
-   * Creates a Merkle tree from an array of transaction IDs.
-   * This is a convenience method specifically for blockchain transactions.
-   * @param transactionIds - Array of transaction IDs
-   * @returns A new MerkleTree instance
-   */
-  public static fromTransactionIds(transactionIds: string[]): MerkleTree {
-    if (transactionIds.length === 0) {
-      // Create a tree with a single empty transaction for empty blocks
-      return new MerkleTree(["0".repeat(64)]); // Empty transaction hash
-    }
-
-    return new MerkleTree(transactionIds);
   }
 }

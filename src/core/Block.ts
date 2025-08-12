@@ -49,21 +49,6 @@ export class Block {
   }
 
   /**
-   * Calculates the Merkle root hash of all transactions in the block.
-   * @returns The Merkle root hash as a hexadecimal string
-   */
-  private calculateMerkleRoot(): string {
-    if (this.transactions.length === 0) {
-      // Empty block - use a default hash
-      return "0".repeat(64);
-    }
-
-    const transactionIds = this.transactions.map((tx) => tx.id);
-    const merkleTree = MerkleTree.fromTransactionIds(transactionIds);
-    return merkleTree.getRootHash() || "0".repeat(64);
-  }
-
-  /**
    * Calculates the hash of this block based on all its critical data.
    * This hash must include all data that should be immutable.
    * @returns The block hash as a hexadecimal string
@@ -118,7 +103,6 @@ export class Block {
       );
       return false;
     }
-
 
     return true;
   }
@@ -196,54 +180,6 @@ export class Block {
   }
 
   /**
-   * Serializes the block to a JSON string.
-   * @returns JSON representation of the block
-   */
-  public serialize(): string {
-    return JSON.stringify({
-      index: this.index,
-      timestamp: this.timestamp,
-      transactions: this.transactions.map((tx) => tx.serialize()),
-      previousHash: this.previousHash,
-      merkleRoot: this.merkleRoot,
-      nonce: this.nonce,
-      difficulty: this.difficulty,
-      hash: this.hash,
-    });
-  }
-
-  /**
-   * Deserializes a block from a JSON string.
-   * @param json - The JSON string to deserialize
-   * @returns A new Block instance
-   */
-  public static deserialize(json: string): Block {
-    const data = JSON.parse(json);
-
-    // Deserialize transactions
-    const transactions = data.transactions.map((txJson: string) =>
-      Transaction.deserialize(txJson)
-    );
-
-    // Create the block
-    const block = new Block(
-      data.index,
-      transactions,
-      data.previousHash,
-      data.nonce,
-      data.difficulty,
-      data.timestamp
-    );
-
-    // Verify the hash matches
-    if (block.hash !== data.hash) {
-      throw new Error("Block hash mismatch during deserialization");
-    }
-
-    return block;
-  }
-
-  /**
    * Creates the genesis block (the first block in the chain).
    * The genesis block has no previous hash and contains no transactions.
    * @param genesisMessage - Optional message to include in the genesis block
@@ -283,5 +219,20 @@ export class Block {
     difficulty: number
   ): Block {
     return new Block(index, transactions, previousHash, 0, difficulty);
+  }
+
+  /**
+   * Calculates the Merkle root hash of all transactions in the block.
+   * @returns The Merkle root hash as a hexadecimal string
+   */
+  private calculateMerkleRoot(): string {
+    if (this.transactions.length === 0) {
+      // Empty block - use a default hash
+      return "0".repeat(64);
+    }
+
+    const transactionIds = this.transactions.map((tx) => tx.id);
+    const merkleTree = MerkleTree.fromTransactionIds(transactionIds);
+    return merkleTree.getRootHash() || "0".repeat(64);
   }
 }

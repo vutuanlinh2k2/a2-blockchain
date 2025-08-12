@@ -15,7 +15,6 @@ export class BlockchainStorage {
     this.prepareStatements();
   }
 
-  // Prepared statements for better performance
   private saveBlockStmt!: Database.Statement;
   private saveTransactionStmt!: Database.Statement;
   private saveUTXOStmt!: Database.Statement;

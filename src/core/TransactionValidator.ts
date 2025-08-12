@@ -106,6 +106,73 @@ export class TransactionValidator {
   }
 
   /**
+   * Adds a transaction to the mempool for conflict checking.
+   * @param transaction - The transaction to add
+   */
+  public addToMempool(transaction: Transaction): void {
+    this.mempool.set(transaction.id, transaction);
+  }
+
+  /**
+   * Removes a transaction from the mempool.
+   * @param transactionId - The transaction ID to remove
+   */
+  public removeFromMempool(transactionId: string): void {
+    this.mempool.delete(transactionId);
+  }
+
+  /**
+   * Creates a demonstration of double-spend prevention.
+   * @param originalTx - The original valid transaction
+   * @returns A conflicting transaction and validation results
+   */
+  public demonstrateDoubleSpend(originalTx: Transaction): {
+    conflictingTx: Transaction;
+    originalValidation: ValidationResult;
+    conflictingValidation: ValidationResult;
+  } {
+    console.log("🔬 Demonstrating double-spend prevention...");
+
+    // Validate the original transaction
+    this.addToMempool(originalTx);
+    const originalValidation = this.validateTransaction(originalTx, false);
+
+    console.log(`   ✅ Original transaction: ${originalTx.id}`);
+    console.log(`   Valid: ${originalValidation.isValid}`);
+
+    // Create a conflicting transaction using the same inputs
+    const conflictingTx = new Transaction(
+      originalTx.inputs, // Same inputs (double-spend attempt)
+      [
+        {
+          address: "attacker-address",
+          amount: originalTx.getTotalOutputAmount(),
+        },
+      ] // Different outputs
+    );
+
+    console.log(`   🚨 Conflicting transaction: ${conflictingTx.id}`);
+
+    // Validate the conflicting transaction (should fail)
+    const conflictingValidation = this.validateTransaction(conflictingTx, true);
+
+    console.log(`   Valid: ${conflictingValidation.isValid}`);
+    console.log(`   Errors: ${conflictingValidation.errors.join(", ")}`);
+
+    if (!conflictingValidation.isValid) {
+      console.log("   ✅ Double-spend successfully prevented!");
+    } else {
+      console.log("   ❌ Double-spend prevention failed!");
+    }
+
+    return {
+      conflictingTx,
+      originalValidation,
+      conflictingValidation,
+    };
+  }
+
+  /**
    * Checks for duplicate inputs within a single transaction.
    * @param transaction - The transaction to check
    * @returns Validation result
@@ -258,108 +325,5 @@ export class TransactionValidator {
         }
       }
     }
-  }
-
-  /**
-   * Adds a transaction to the mempool for conflict checking.
-   * @param transaction - The transaction to add
-   */
-  public addToMempool(transaction: Transaction): void {
-    this.mempool.set(transaction.id, transaction);
-  }
-
-  /**
-   * Removes a transaction from the mempool.
-   * @param transactionId - The transaction ID to remove
-   */
-  public removeFromMempool(transactionId: string): void {
-    this.mempool.delete(transactionId);
-  }
-
-  /**
-   * Clears the mempool.
-   */
-  public clearMempool(): void {
-    this.mempool.clear();
-  }
-
-  /**
-   * Gets all recorded double-spend attempts.
-   * @returns Array of double-spend attempts
-   */
-  public getDoubleSpendAttempts(): DoubleSpendAttempt[] {
-    return [...this.doubleSpendAttempts];
-  }
-
-  /**
-   * Creates a demonstration of double-spend prevention.
-   * @param originalTx - The original valid transaction
-   * @returns A conflicting transaction and validation results
-   */
-  public demonstrateDoubleSpend(originalTx: Transaction): {
-    conflictingTx: Transaction;
-    originalValidation: ValidationResult;
-    conflictingValidation: ValidationResult;
-  } {
-    console.log("🔬 Demonstrating double-spend prevention...");
-
-    // Validate the original transaction
-    this.addToMempool(originalTx);
-    const originalValidation = this.validateTransaction(originalTx, false);
-
-    console.log(`   ✅ Original transaction: ${originalTx.id}`);
-    console.log(`   Valid: ${originalValidation.isValid}`);
-
-    // Create a conflicting transaction using the same inputs
-    const conflictingTx = new Transaction(
-      originalTx.inputs, // Same inputs (double-spend attempt)
-      [
-        {
-          address: "attacker-address",
-          amount: originalTx.getTotalOutputAmount(),
-        },
-      ] // Different outputs
-    );
-
-    console.log(`   🚨 Conflicting transaction: ${conflictingTx.id}`);
-
-    // Validate the conflicting transaction (should fail)
-    const conflictingValidation = this.validateTransaction(conflictingTx, true);
-
-    console.log(`   Valid: ${conflictingValidation.isValid}`);
-    console.log(`   Errors: ${conflictingValidation.errors.join(", ")}`);
-
-    if (!conflictingValidation.isValid) {
-      console.log("   ✅ Double-spend successfully prevented!");
-    } else {
-      console.log("   ❌ Double-spend prevention failed!");
-    }
-
-    return {
-      conflictingTx,
-      originalValidation,
-      conflictingValidation,
-    };
-  }
-
-  /**
-   * Gets comprehensive statistics about validation.
-   * @returns Validation statistics
-   */
-  public getValidationStats(): {
-    mempoolSize: number;
-    doubleSpendAttempts: number;
-    recentAttempts: number;
-  } {
-    const oneHourAgo = Date.now() - 60 * 60 * 1000;
-    const recentAttempts = this.doubleSpendAttempts.filter(
-      (attempt) => attempt.timestamp > oneHourAgo
-    ).length;
-
-    return {
-      mempoolSize: this.mempool.size,
-      doubleSpendAttempts: this.doubleSpendAttempts.length,
-      recentAttempts,
-    };
   }
 }

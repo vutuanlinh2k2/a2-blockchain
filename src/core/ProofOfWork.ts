@@ -234,42 +234,11 @@ export class ProofOfWork {
   }
 
   /**
-   * Estimates the time required to mine a block at the given difficulty.
-   * @param difficulty - The mining difficulty
-   * @param hashRate - Hash rate in hashes per second
-   * @returns Estimated time in seconds
-   */
-  public estimateMiningTime(difficulty: number, hashRate: number): number {
-    if (hashRate === 0) return Infinity;
-
-    // Expected number of attempts = 2^(4 * difficulty) for hexadecimal
-    const expectedAttempts = Math.pow(16, difficulty);
-    return expectedAttempts / hashRate;
-  }
-
-  /**
    * Gets the current configuration.
    * @returns The difficulty configuration
    */
   public getConfig(): DifficultyConfig {
     return { ...this.config };
-  }
-
-  /**
-   * Creates a mining candidate block from transactions.
-   * @param index - Block index
-   * @param transactions - Transactions to include
-   * @param previousHash - Hash of previous block
-   * @param difficulty - Mining difficulty
-   * @returns A block ready for mining
-   */
-  public createMiningCandidate(
-    index: number,
-    transactions: Transaction[],
-    previousHash: string,
-    difficulty: number
-  ): Block {
-    return Block.createCandidate(index, transactions, previousHash, difficulty);
   }
 
   /**

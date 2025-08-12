@@ -48,19 +48,6 @@ export class Transaction {
   }
 
   /**
-   * Calculates the unique transaction ID by hashing all transaction data.
-   * @returns The transaction ID as a hexadecimal string
-   */
-  private calculateId(): string {
-    const data = {
-      timestamp: this.timestamp,
-      inputs: this.inputs,
-      outputs: this.outputs,
-    };
-    return createHash("sha256").update(JSON.stringify(data)).digest("hex");
-  }
-
-  /**
    * Gets the total amount being sent in this transaction.
    * @returns Total output amount
    */
@@ -148,6 +135,19 @@ export class Transaction {
     }
 
     return tx;
+  }
+
+  /**
+   * Calculates the unique transaction ID by hashing all transaction data.
+   * @returns The transaction ID as a hexadecimal string
+   */
+  private calculateId(): string {
+    const data = {
+      timestamp: this.timestamp,
+      inputs: this.inputs,
+      outputs: this.outputs,
+    };
+    return createHash("sha256").update(JSON.stringify(data)).digest("hex");
   }
 }
 
@@ -246,22 +246,6 @@ export class TransactionPool {
    */
   public getAllTransactions(): Transaction[] {
     return Array.from(this.transactions.values());
-  }
-
-  /**
-   * Gets the number of transactions in the pool.
-   * @returns The count of pending transactions
-   */
-  public size(): number {
-    return this.transactions.size;
-  }
-
-  /**
-   * Clears all transactions from the pool.
-   */
-  public clear(): void {
-    this.transactions.clear();
-    console.log("🧹 Transaction pool cleared");
   }
 
   /**
