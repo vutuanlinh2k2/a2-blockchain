@@ -1,30 +1,20 @@
-/**
- * CLI utility functions
- */
-
 import chalk from "chalk";
 import figlet from "figlet";
 import { Blockchain, BlockchainConfig } from "../core/Blockchain";
 import * as fs from "fs";
 import * as path from "path";
 
-// Global blockchain instance
 let blockchain: Blockchain | null = null;
 
-// Default database paths
 export const DEFAULT_CORE_DB_PATH = "data/blockchain.db";
 
-/**
- * Initialize blockchain with default configuration
- */
 export function initBlockchain(dbPath?: string): Blockchain {
   const config: BlockchainConfig = {
-    genesisMessage: "Genesis Block - TypeScript Blockchain Implementation",
-    initialDifficulty: 2, // Low difficulty for demo purposes
+    genesisMessage: "Genesis Block",
+    initialDifficulty: 2,
     blockReward: 50,
   };
 
-  // Ensure database directory exists and announce DB in use
   if (dbPath) {
     ensureDataDirectory(dbPath);
   }
@@ -60,21 +50,6 @@ export function closeBlockchain(): void {
 }
 
 /**
- * Show CLI banner
- */
-export function showBanner(): void {
-  console.log(
-    chalk.cyan(
-      figlet.textSync("Blockchain CLI", {
-        font: "Standard",
-        horizontalLayout: "default",
-        verticalLayout: "default",
-      })
-    )
-  );
-}
-
-/**
  * Ensure database directory exists
  */
 export function ensureDataDirectory(dbPath: string): void {
@@ -91,5 +66,20 @@ export function handleError(commandName: string, error: unknown): void {
   console.error(
     chalk.red(`❌ ${commandName} error:`),
     error instanceof Error ? error.message : error
+  );
+}
+
+/**
+ * Show CLI banner
+ */
+export function showBanner(): void {
+  console.log(
+    chalk.cyan(
+      figlet.textSync("Blockchain CLI", {
+        font: "Standard",
+        horizontalLayout: "default",
+        verticalLayout: "default",
+      })
+    )
   );
 }

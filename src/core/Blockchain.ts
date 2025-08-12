@@ -508,30 +508,11 @@ export class Blockchain {
   }
 
   /**
-   * Gets a block by its hash.
-   * @param hash - The block hash
-   * @returns The block if found, undefined otherwise
-   */
-  // TODO: no references for now
-  public getBlockByHash(hash: string): Block | undefined {
-    return this.blocks.find((block) => block.hash === hash);
-  }
-
-  /**
    * Gets the entire blockchain.
    * @returns Array of all blocks in the chain
    */
   public getChain(): Block[] {
     return [...this.blocks]; // Return a copy to prevent external modification
-  }
-
-  /**
-   * Gets the length of the blockchain.
-   * @returns The number of blocks in the chain
-   */
-  // TODO: no references for now
-  public getChainLength(): number {
-    return this.blocks.length;
   }
 
   /**

@@ -3,7 +3,7 @@ import chalk from "chalk";
 import { getBlockchain, handleError, DEFAULT_CORE_DB_PATH } from "../utils";
 import {
   MinerOptions,
-  TransferOptions,
+  TransactionOptions,
   BalanceOptions,
   ChainOptions,
 } from "../types";
@@ -39,7 +39,7 @@ export function createTransactionCommand(): Command {
     .requiredOption("-f, --from <address>", "Sender address")
     .requiredOption("-t, --to <address>", "Recipient address")
     .requiredOption("-a, --amount <number>", "Amount to transfer")
-    .action((options: TransferOptions) => {
+    .action((options: TransactionOptions) => {
       try {
         const bc = getBlockchain(DEFAULT_CORE_DB_PATH);
         const amount = parseFloat(options.amount);

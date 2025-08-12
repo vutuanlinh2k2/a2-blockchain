@@ -1,13 +1,7 @@
-/**
- * CLI module entry point
- * Exports all command creation functions and utilities
- */
-
 import { Command } from "commander";
 import chalk from "chalk";
 import { showBanner, closeBlockchain } from "./utils";
 
-// Import command creators
 import {
   createMineCommand,
   createTransactionCommand,
@@ -27,9 +21,6 @@ import {
   createDemoDifficultyAdjustmentCommand,
 } from "./commands/demo";
 
-/**
- * Create the main CLI program with all commands
- */
 export function createProgram(): Command {
   const program = new Command();
 
@@ -40,8 +31,6 @@ export function createProgram(): Command {
       "beforeAll",
       `${chalk.blue("A TypeScript blockchain implementation with PoW consensus")}\n${chalk.gray(
         "TypeScript • Proof-of-Work • UTXO Model • SQLite"
-      )}\n\n${chalk.yellow(
-        "Core commands use data/blockchain.db. Demo commands use an isolated data/demo.db and auto-clean after each run."
       )}\n`
     );
 
@@ -49,8 +38,6 @@ export function createProgram(): Command {
   program.addCommand(createMineCommand());
   program.addCommand(createTransactionCommand());
   program.addCommand(createBalanceCommand());
-
-  // Display commands
   program.addCommand(createDisplayChainCommand());
   program.addCommand(createDisplayMempoolCommand());
 
@@ -58,9 +45,9 @@ export function createProgram(): Command {
   program.addCommand(createClearBlockchainDataCommand());
   program.addCommand(createSeedBlockchainDataCommand());
 
-  // Demo commands - All Required Features (1-8)
-  program.addCommand(createDemoImmutabilityCommand()); // Feature 2: Immutability
-  program.addCommand(createDemoDoubleSpendPreventionCommand()); // Feature 3: Double-Spend Prevention
+  // Demo commands
+  program.addCommand(createDemoImmutabilityCommand());
+  program.addCommand(createDemoDoubleSpendPreventionCommand());
   program.addCommand(createDemoDifficultyAdjustmentCommand());
 
   return program;
