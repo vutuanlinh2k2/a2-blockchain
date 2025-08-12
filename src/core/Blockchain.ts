@@ -231,7 +231,7 @@ export class Blockchain {
       );
     }
 
-    console.log(`✅ Block ${block.index} added to chain and saved to database`);
+    console.log(chalk.green(`✅ Block ${block.index} added to chain and saved to database`));
 
     return true;
   }
@@ -386,8 +386,8 @@ export class Blockchain {
         `\n📦 Mining block #${candidateBlock.index} with ${blockTransactions.length} transactions`
       )
     );
-    console.log(`   Difficulty: ${currentDifficulty}`);
 
+    console.log(`💳 Transactions:`)
     // Log a concise, one-line summary for each transaction included in the block
     for (let i = 0; i < blockTransactions.length; i++) {
       const tx = blockTransactions[i];
@@ -413,7 +413,7 @@ export class Blockchain {
 
       const txType = isCoinbase ? "coinbase" : "payment";
       console.log(
-        `   tx#${i}, from=${fromAddresses}, to=${toField}, amount=${totalAmount}, type=${txType}`
+        `   [${i}] from=${fromAddresses}, to=${toField}, amount=${totalAmount}, type=${txType}`
       );
     }
 

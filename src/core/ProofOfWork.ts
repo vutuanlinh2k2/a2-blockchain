@@ -55,83 +55,91 @@ export class ProofOfWork {
     block: Block,
     onProgress?: (stats: Partial<MiningStats>) => boolean
   ): Promise<Block | null> {
-    const stats: MiningStats = {
-      startTime: Date.now(),
-      attempts: 0,
-      hashRate: 0,
-      difficulty: block.difficulty,
-      targetHash: this.getDifficultyTarget(block.difficulty),
-      success: false,
-    };
+    return new Promise((resolve) => {
+      const stats: MiningStats = {
+        startTime: Date.now(),
+        attempts: 0,
+        hashRate: 0,
+        difficulty: block.difficulty,
+        targetHash: this.getDifficultyTarget(block.difficulty),
+        success: false,
+      };
 
-    console.log(`🎯 Target: ${stats.targetHash.substring(0, 20)}...`);
+      console.log(`🧩 Current difficulty: ${stats.difficulty}`);
+      console.log(`🎯 Target: ${stats.targetHash.substring(0, 20)}...`);
 
-    let currentBlock = block;
-    let lastProgressUpdate = Date.now();
-    const progressInterval = 1000; // Update progress every second
+      let currentBlock = block;
+      let lastProgressUpdate = Date.now();
+      const progressInterval = 1000; // Update progress every second
 
-    while (true) {
-      // Check if hash meets difficulty requirement
-      if (currentBlock.hasValidProofOfWork()) {
-        stats.endTime = Date.now();
-        stats.finalHash = currentBlock.hash;
-        stats.success = true;
-        stats.hashRate = this.calculateHashRate(
-          stats.attempts,
-          stats.endTime - stats.startTime
-        );
+      const mine = () => {
+        // Check if hash meets difficulty requirement
+        if (currentBlock.hasValidProofOfWork()) {
+          stats.endTime = Date.now();
+          stats.finalHash = currentBlock.hash;
+          stats.success = true;
+          stats.hashRate = this.calculateHashRate(
+            stats.attempts,
+            stats.endTime - stats.startTime
+          );
 
-        console.log(`🎉 Block mined successfully!`);
-        console.log(`   Nonce: ${currentBlock.nonce}`);
-        console.log(`   Hash: ${currentBlock.hash}`);
-        console.log(
-          `   Reward: ${currentBlock.transactions[0].outputs[0].amount}`
-        );
-        console.log(`   Attempts: ${stats.attempts.toLocaleString()}`);
-        console.log(
-          `   Time: ${((stats.endTime - stats.startTime) / 1000).toFixed(2)}s`
-        );
-        console.log(`   Hash Rate: ${this.formatHashRate(stats.hashRate)}`);
+          console.log(`🎉 Block mined successfully!`);
+          console.log(`   Nonce: ${currentBlock.nonce}`);
+          console.log(`   Hash: ${currentBlock.hash}`);
+          console.log(
+            `   Reward: amount=${currentBlock.transactions[0].outputs[0].amount}, recipient=${currentBlock.transactions[0].outputs[0].address}`
+          );
+          console.log(
+            `   Time: ${parseFloat(((stats.endTime - stats.startTime) / 1000).toFixed(4))}s`
+          );
+          console.log(`   Hash Rate: ${this.formatHashRate(stats.hashRate)}`);
 
-        return currentBlock;
-      }
-
-      // Increment attempts and nonce
-      stats.attempts++;
-      currentBlock = currentBlock.incrementNonce();
-
-      // Update progress periodically
-      const now = Date.now();
-      if (now - lastProgressUpdate >= progressInterval) {
-        const elapsed = now - stats.startTime;
-        stats.hashRate = this.calculateHashRate(stats.attempts, elapsed);
-
-        // Call progress callback if provided
-        if (onProgress) {
-          const shouldContinue = onProgress(stats);
-          if (!shouldContinue) {
-            console.log("🛑 Mining stopped by user");
-            return null;
-          }
+          resolve(currentBlock);
+          return;
         }
 
-        lastProgressUpdate = now;
+        // Increment attempts and nonce
+        stats.attempts++;
+        currentBlock = currentBlock.incrementNonce();
 
-        // Log progress
-        const timeElapsed = (elapsed / 1000).toFixed(1);
-        console.log(
-          `⛏️  Mining... ${stats.attempts.toLocaleString()} attempts, ` +
-            `${this.formatHashRate(stats.hashRate)}, ${timeElapsed}s`
-        );
-      }
+        // Update progress periodically
+        const now = Date.now();
+        if (now - lastProgressUpdate >= progressInterval) {
+          const elapsed = now - stats.startTime;
+          stats.hashRate = this.calculateHashRate(stats.attempts, elapsed);
 
-      // Safety check to prevent infinite loops in development
-      if (stats.attempts > 10000000) {
-        console.log("⚠️  Mining stopped: Too many attempts (safety limit)");
-        console.log("   Consider reducing difficulty for development");
-        return null;
-      }
-    }
+          // Call progress callback if provided
+          if (onProgress) {
+            const shouldContinue = onProgress(stats);
+            if (!shouldContinue) {
+              console.log("🛑 Mining stopped by user");
+              resolve(null);
+              return;
+            }
+          }
+
+          lastProgressUpdate = now;
+
+          // Log progress
+          const timeElapsed = (elapsed / 1000).toFixed(1);
+          console.log(
+            `⛏️  Mining... ${stats.attempts.toLocaleString()} attempts, ` +
+              `${this.formatHashRate(stats.hashRate)}, ${timeElapsed}s`
+          );
+        }
+
+        // Safety check to prevent infinite loops in development
+        if (stats.attempts > 10000000) {
+          console.log("⚠️  Mining stopped: Too many attempts (safety limit)");
+          console.log("   Consider reducing difficulty for development");
+          resolve(null);
+          return;
+        }
+        // Yield to the event loop to avoid blocking
+        setImmediate(mine);
+      };
+      mine();
+    });
   }
 
   /**
