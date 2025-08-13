@@ -219,10 +219,38 @@ Demonstrates how the system prevents spending the same coins twice.
 ### **Difficulty Adjustment**
 
 ```bash
-npm start -- demo-difficulty
+npm start -- demo-difficulty-adjustment
 ```
 
 Illustrates automatic mining difficulty adjustment based on block times.
+
+## 🧪 Testing
+
+This project includes comprehensive unit, integration, and end-to-end (CLI) tests using Jest.
+
+```bash
+# Run all tests
+npm test
+
+# Watch mode
+npm run test:watch
+
+# Coverage report
+npm run test:coverage
+
+# Run a specific suite directory
+npm test -- tests/unit
+npm test -- tests/integration
+npm test -- tests/e2e
+
+# Filter by test name
+npm test -- -t "Double-spend prevention"
+```
+
+Notes:
+
+- CLI E2E tests compile the project before execution to run against `dist/main.js`.
+- Tests use isolated temporary directories/databases and do not affect your real data.
 
 ## 🔑 Core Features
 
