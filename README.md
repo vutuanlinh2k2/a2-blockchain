@@ -1,6 +1,6 @@
 # 🔗 A2-Blockchain
 
-A **TypeScript blockchain implementation** with Proof-of-Work consensus, UTXO model, and professional CLI interface. This project demonstrates core blockchain concepts through a fully functional implementation.
+A **TypeScript blockchain implementation** with Proof-of-Work consensus, UTXO model, and professional CLI interface. This is the code for Assignment 2 for the course **INTE2641|INTE2642 Blockchain Technology Fundamentals**.
 
 ## 🚀 Quick Start
 
