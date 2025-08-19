@@ -10,11 +10,6 @@ import { BlockchainDB } from "./Database";
 export class BlockchainStorage {
   private readonly db: Database.Database;
 
-  constructor(dbInstance: BlockchainDB) {
-    this.db = dbInstance.getInstance();
-    this.prepareStatements();
-  }
-
   private saveBlockStmt!: Database.Statement;
   private saveTransactionStmt!: Database.Statement;
   private saveUTXOStmt!: Database.Statement;
@@ -29,9 +24,11 @@ export class BlockchainStorage {
   private getChainStateStmt!: Database.Statement;
   private deleteUTXOStmt!: Database.Statement;
 
-  /**
-   * Prepare all SQL statements for better performance.
-   */
+  constructor(dbInstance: BlockchainDB) {
+    this.db = dbInstance.getInstance();
+    this.prepareStatements();
+  }
+
   private prepareStatements(): void {
     this.saveBlockStmt = this.db.prepare(`
       INSERT OR REPLACE INTO blocks 

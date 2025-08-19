@@ -1,12 +1,14 @@
-import { Transaction, UTXO, UTXOSet } from "../../src/core/Transaction";
+import { Transaction, TransactionPool } from "../../src/core/Transaction";
 
 describe("Transaction", () => {
-  test("coinbase transaction has no inputs and positive output", () => {
-    const tx = Transaction.createCoinbase("miner", 50);
-    expect(tx.inputs).toHaveLength(0);
+  test("transaction with inputs and outputs is valid", () => {
+    const inputs = [{ txId: "prevTx", outputIndex: 0 }];
+    const outputs = [{ address: "alice", amount: 50 }];
+
+    const tx = new Transaction(inputs, outputs);
+    expect(tx.inputs).toHaveLength(1);
     expect(tx.outputs).toHaveLength(1);
-    expect(tx.outputs[0].amount).toBe(50);
-    expect(tx.isCoinbase()).toBe(true);
+    expect(tx.isCoinbase()).toBe(false);
     expect(tx.isValid()).toBe(true);
   });
 
@@ -19,14 +21,46 @@ describe("Transaction", () => {
   });
 });
 
-describe("UTXOSet", () => {
-  test("add, get, spend UTXO", () => {
-    const set = new UTXOSet();
-    const utxo = new UTXO("tx1", 0, "alice", 10, false);
-    set.addUTXO(utxo);
-    expect(set.hasUnspentUTXO("tx1", 0)).toBe(true);
-    expect(set.getBalance("alice")).toBe(10);
-    expect(set.spendUTXO("tx1", 0, "spendtx")).toBe(true);
-    expect(set.hasUnspentUTXO("tx1", 0)).toBe(false);
+describe("TransactionPool", () => {
+  let pool: TransactionPool;
+
+  beforeEach(() => {
+    pool = new TransactionPool();
+  });
+
+  test("adds valid transaction to pool", () => {
+    const tx = new Transaction(
+      [{ txId: "prevTx", outputIndex: 0 }],
+      [{ address: "alice", amount: 50 }]
+    );
+
+    const result = pool.addTransaction(tx);
+    expect(result).toBe(true);
+    expect(pool.getAllTransactions()).toHaveLength(1);
+  });
+
+  test("selects transactions for block", () => {
+    const tx = new Transaction(
+      [{ txId: "prevTx", outputIndex: 0 }],
+      [{ address: "alice", amount: 50 }]
+    );
+
+    pool.addTransaction(tx);
+    const selected = pool.selectTransactionsForBlock(10);
+    expect(selected).toHaveLength(1);
+    expect(selected[0].id).toBe(tx.id);
+  });
+
+  test("removes transaction from pool", () => {
+    const tx = new Transaction(
+      [{ txId: "prevTx", outputIndex: 0 }],
+      [{ address: "alice", amount: 50 }]
+    );
+
+    pool.addTransaction(tx);
+    expect(pool.getAllTransactions()).toHaveLength(1);
+
+    pool.removeTransaction(tx.id);
+    expect(pool.getAllTransactions()).toHaveLength(0);
   });
 });
