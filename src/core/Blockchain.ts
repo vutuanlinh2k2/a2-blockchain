@@ -603,7 +603,7 @@ export class Blockchain {
     );
 
     console.log(`💳 Transactions:`);
-    // Log a concise, one-line summary for each transaction included in the block
+    // Log a concise summary for each transaction included in the block
     for (let i = 0; i < blockTransactions.length; i++) {
       const tx = blockTransactions[i];
       const isCoinbase = tx.inputs.length === 0;
@@ -623,13 +623,21 @@ export class Blockchain {
         fromAddresses = uniqueFroms.join("+") || "unknown";
       }
 
-      // Recipient addresses and amounts
-      const toField = tx.outputs.map((o) => `${o.address}`);
-
       const txType = isCoinbase ? "coinbase" : "payment";
-      console.log(
-        `   [${i}] from=${fromAddresses}, to=${toField}, amount=${totalAmount}, type=${txType}`
-      );
+
+      if (isCoinbase) {
+        // For coinbase transactions, show simple one-line format
+        console.log(
+          `   [${i}] to=${tx.outputs[0].address}, amount=${totalAmount} (coinbase)`
+        );
+      } else {
+        // For normal transactions, show sender and total amount, then each output separately
+        console.log(`   [${i}] from=${fromAddresses}, amount=${totalAmount}`);
+        // Show each output on a separate line
+        tx.outputs.forEach((output, outputIndex) => {
+          console.log(`       to=${output.address}, amount=${output.amount}`);
+        });
+      }
     }
 
     // Mine the block
